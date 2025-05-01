@@ -665,6 +665,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
         </div>
         <?php } ?>
     </div>
+    
     <!-- Cart Section -->
     <div class="cart-section">
         <div class="cart">
