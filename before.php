@@ -522,7 +522,7 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
     <h2 class="title-card">Rekomendasi Untukmu</h2>
     <div class="wrapper-card">
     <?php while ($buku = mysqli_fetch_assoc($query)) { ?>
-        <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
+        <a href="detail01.php?id_buku=<?= $buku['id_buku'] ?>">
     <div class="card">
         <img src="image/<?= $buku['gambar']; ?>" alt="<?= $buku['judul']; ?>">
         <p><small><?= $buku['penulis']; ?></small></p>
