@@ -1,5 +1,10 @@
 <?php
+session_start();
 include "koneksi.php";
+
+$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+
 $id_buku = $_GET['id_buku'];
 $sql = "SELECT * FROM buku WHERE id_buku = $id_buku";
 $query = mysqli_query($koneksi, $sql);
@@ -191,13 +196,95 @@ if ($buku = mysqli_fetch_assoc($query)) {
             color: var(--purple);
         }
 
-        .profile {
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .profile-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-right: 30px;
+        }
+
+        .profile-dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: white;
+            width: 200px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            padding: 15px;
+            display: none;
+            z-index: 1000;
+            margin-top: 10px;
+        }
+
+        .profile-dropdown:hover .profile-dropdown-menu {
+            display: block;
+        }
+
+        .profile-info {
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+
+        .profile-name {
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .profile-email {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .profile-menu {
+            list-style: none;
+        }
+
+        .profile-menu li {
+            padding: 8px 0;
+        }
+
+        .profile-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+            font-size: 1.4rem;
+        }
+
+        .profile-menu li a i {
+            font-size: 1.6rem;
+            color: #666;
+        }
+
+        .profile-menu li a:hover {
+            color: var(--purple);
+        }
+
+        .profile-menu li a:hover i {
+            color: var(--purple);
+        }
+
+
+
+        /* .profile {
             height: 32px;
             width: 32px;
             background-color: #d1d5db;
             border-radius: 9999px;
             margin-right: 30px;
-        }
+        } */
 
        /* Breadcrumb */
        .breadcrumb {
@@ -597,7 +684,24 @@ if ($buku = mysqli_fetch_assoc($query)) {
                     <i class="ri-search-line"></i>
                 </div>
                 <div class="navbar-right">
-                    <a href="LoginRegister.php" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang0.php" class="fas fa-shopping-cart"></a>
+                    <div class="profile-dropdown">
+                        <div class="profile-icon">
+                            <i class="ri-user-line"></i>
+                        </div>
+                        <div class="profile-dropdown-menu">
+                            <div class="profile-info">
+                            <div class="profile-name"><?= $username ?></div>
+                            <div class="profile-email"><?= $email ?></div>
+                        </div>
+                            <ul class="profile-menu">
+                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </nav>
         </div>

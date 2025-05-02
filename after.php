@@ -546,7 +546,7 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
                             <div class="profile-info">
                             <div class="profile-name"><?= $username ?></div>
                             <div class="profile-email"><?= $email ?></div>
-                            </div>
+                        </div>
                             <ul class="profile-menu">
                                 <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
                                 <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
