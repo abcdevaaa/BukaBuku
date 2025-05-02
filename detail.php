@@ -1,5 +1,10 @@
 <?php
+session_start();
 include "koneksi.php";
+
+$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+
 $id_buku = $_GET['id_buku'];
 $sql = "SELECT * FROM buku WHERE id_buku = $id_buku";
 $query = mysqli_query($koneksi, $sql);
@@ -191,65 +196,84 @@ if ($buku = mysqli_fetch_assoc($query)) {
             color: var(--purple);
         }
 
-        .profile {
-            height: 32px;
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .profile-icon {
             width: 32px;
+            height: 32px;
             background-color: #d1d5db;
-            border-radius: 9999px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             margin-right: 30px;
         }
 
-        .login {
-            display: flex;
-            gap: 10px;
-        }
-
-        .login .btn-masuk,
-        .login .btn-daftar {
-            font-size: 1.4rem;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .login .btn-masuk {
+        .profile-dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
             background-color: white;
-            color: black;
-            border: 1px solid black;
+            width: 200px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            padding: 15px;
+            display: none;
+            z-index: 1000;
+            margin-top: 10px;
         }
 
-        .login .btn-masuk:hover {
-            background-color: #f0f0f0;
+        .profile-dropdown:hover .profile-dropdown-menu {
+            display: block;
         }
 
-        .login .btn-daftar {
-            background-color: var(--purple);
-            color: white;
+        .profile-info {
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
         }
 
-        .login .btn-daftar:hover {
-            background-color: #a56abd;
+        .profile-name {
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin-bottom: 5px;
         }
 
-
-       /* Breadcrumb */
-       .breadcrumb {
-            padding: 16px 24px;
+        .profile-email {
+            font-size: 1.2rem;
+            color: #666;
         }
 
-        .breadcrumb nav {
-            color: #6b7280;
-            font-size: 14px;
+        .profile-menu {
+            list-style: none;
         }
 
-        .breadcrumb nav a {
-            color: #6b7280;
-            text-decoration: none;
+        .profile-menu li {
+            padding: 8px 0;
         }
 
-        .breadcrumb nav span {
-            margin-left: 4px;
+        .profile-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+            font-size: 1.4rem;
+        }
+
+        .profile-menu li a i {
+            font-size: 1.6rem;
+            color: #666;
+        }
+
+        .profile-menu li a:hover {
+            color: var(--purple);
+        }
+
+        .profile-menu li a:hover i {
+            color: var(--purple);
         }
 
         /* Main Content */
@@ -348,6 +372,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
         }
         /* Produk Terkait */
         .title-card {
+            margin-top: 20px;
             text-align: center;
             margin-left: 3rem;
             text-align: left;
@@ -459,7 +484,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
             background-color: var(--purple);
             color: #ffffff;
             padding: 10px 16px;
-            border-radius: 20px;
+            border-radius: 10px;
             border: none;
             cursor: pointer;
             font-size: 1.4rem;
@@ -610,9 +635,11 @@ if ($buku = mysqli_fetch_assoc($query)) {
         </div>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
                     <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
@@ -631,10 +658,23 @@ if ($buku = mysqli_fetch_assoc($query)) {
                     <i class="ri-search-line"></i>
                 </div>
                 <div class="navbar-right">
-                    <a href="LoginRegister.php" class="fas fa-shopping-cart"></a>
-                    <div class="login">
-                    <a href="LoginRegister.php"><p class="btn-masuk">Masuk</p></a>
-                    <a href="LoginRegister.php"><p class="btn-daftar">Daftar</p></a>
+                    <a href="keranjang0.php" class="fas fa-shopping-cart"></a>
+                    <div class="profile-dropdown">
+                        <div class="profile-icon">
+                            <i class="ri-user-line"></i>
+                        </div>
+                        <div class="profile-dropdown-menu">
+                            <div class="profile-info">
+                            <div class="profile-name"><?= $username ?></div>
+                            <div class="profile-email"><?= $email ?></div>
+                        </div>
+                            <ul class="profile-menu">
+                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -642,11 +682,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
     </header>
     
     <!-- Breadcrumb -->
-    <div class="breadcrumb">
-        <nav>
-            <a href="before.php">Beranda</a> &gt; <span><?= $buku['judul']; ?></span>
-        </nav>
-    </div>
+    
     <!-- Main Content -->
     <div class="main-content">
         <div class="book-details">
@@ -717,10 +753,10 @@ if ($buku = mysqli_fetch_assoc($query)) {
                     <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
                 </div>
             </div>
+            <?php } ?>
             <div class="cart-actions">
                 <button class="add-to-cart">+Keranjang</button>
             </div>
-            <?php } ?>
         </div>
     </div>
 

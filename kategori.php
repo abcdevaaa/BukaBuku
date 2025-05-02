@@ -1,28 +1,25 @@
 <?php
-session_start();
-include "koneksi.php";
+include 'koneksi.php'; 
 
-$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+$id_kategori = $_GET['id'];
 
-$id_buku = $_GET['id_buku'];
-$sql = "SELECT * FROM buku WHERE id_buku = $id_buku";
-$query = mysqli_query($koneksi, $sql);
-$queryBuku = mysqli_query($koneksi, "SELECT * FROM buku");
-$queryBuku01 = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_buku = $id_buku");
+// Ambil data kategori
+$queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori WHERE id_kategori = '$id_kategori'");
+$kategori = mysqli_fetch_assoc($queryKategori);
 
-if ($buku = mysqli_fetch_assoc($query)) {
-
+// Ambil data buku
+$queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id_kategori'");
 ?>
 
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.2.0/remixicon.css">
-    <title>Bukabuku</title>
+    <title>Bukabuku - Kategori</title>
     <style>
         
         :root {
@@ -196,6 +193,8 @@ if ($buku = mysqli_fetch_assoc($query)) {
             color: var(--purple);
         }
 
+        /* Profile Dropdown */
+        
         .profile-dropdown {
             position: relative;
         }
@@ -276,257 +275,103 @@ if ($buku = mysqli_fetch_assoc($query)) {
             color: var(--purple);
         }
 
-
-
-        /* .profile {
-            height: 32px;
-            width: 32px;
-            background-color: #d1d5db;
-            border-radius: 9999px;
-            margin-right: 30px;
-        } */
-
-       /* Breadcrumb */
-       .breadcrumb {
-            padding: 16px 24px;
-        }
-
-        .breadcrumb nav {
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-        .breadcrumb nav a {
-            color: #6b7280;
-            text-decoration: none;
-        }
-
-        .breadcrumb nav span {
-            margin-left: 4px;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 0 24px;
-        }
-
-        .main-content .book-details {
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            gap: 50px;
-        }
-
-        .main-content .book-details img {
-            width: 300px;
-            height: 428px;
-            object-fit: cover;
-            flex-shrink: 0;
-        }
-
-        .main-content .book-details .details {
-            flex: 1;
-        }
-
-        .main-content .book-details .details h1 {
-            font-size: 5rem;
-            font-weight: bold;
-        }
-
-        .main-content .book-details .details p {
-            font-size: 15px;
-            color: #4b5563;
-            margin-top: 8px;
-        }
-
-        .main-content .book-details .details button {
-            margin-top: 13px;
-            margin-bottom: 13px;
-            color: #4b5563;
-            background: none;
-            border: none;
-            cursor: pointer;
-        }
-        #favorite-button {
+        /* Breadcrumb */
+        .breadcrumb {
+            padding: 15px;
+            font-size: 1.4rem;
+            color: #666;
             display: flex;
             align-items: center;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.5rem;
+            gap: 5px;
         }
 
-        #favorite-button i {
-            margin-right: 5px;
-            color: #4b5563; /* Warna ikon */
-        }
-
-        #favorite-button:hover i {
-            color: #6b21a8; /* Warna saat hover */
-        }
-
-        .main-content .book-details .details .description {
-            color: #4b5563;
-            margin-top: 10px;
-        }
-
-        .main-content .book-details .details .read-more {
-            /* color: #6b21a8; */
-            /* margin-top: 13px; */
-            margin-bottom: 13px;
-            cursor: pointer;
-        }
-        .post {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between; 
-        }
-
-        .read-more {
-            margin-top: 10px; 
-            align-self: flex-end;
-            background: none; 
-            border: none; 
+        .breadcrumb a {
             color: var(--purple);
-            cursor: pointer; 
-        }
-        .main-content .book-details .details .book-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            
-        }
-        .main-content .book-details .details .book-info p{
-            font-size: 13px;
-        }
-        /* Produk Terkait */
-        .title-card {
-            text-align: center;
-            margin-left: 3rem;
-            text-align: left;
-            /* margin-top: 2rem; */
-            font-size: 2rem;
         }
 
-        .wrapper-card {
+        .breadcrumb span {
+            color: #999;
+        }
+
+        /* Category Page */
+            .category-header {
+            background: linear-gradient(rgba(110, 52, 130, 0.8), rgba(110, 52, 130, 0.8)), 
+            url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-align: center;
+            padding: 80px 20px;
+            }
+
+        .category-title {
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .category-description {
+            font-size: 1.4rem;
+            color: #fff;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .books-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
+            gap: 15px;
             padding: 20px;
+            margin: 0 auto;
         }
 
-        .card {
-            background-color: white;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        .book-card {
+            background: white;
             border-radius: 8px;
-            padding: 16px;
-            text-align: center;
-        }
-
-        .card img {
-            width: 124px;
-            height: auto;
-            object-fit: cover;
-        }
-
-        .card p {
-            margin: 5px 0;
-        }
-
-        .card small {
-            color: #888;
-        }
-
-        .card-price {
-            color: var(--purple);
-            font-weight: bold;
-        }
-
-        .cart-section {
-            padding: 20px 24px;
-            width: 100%;
-            margin-top: 32px;
-            margin-bottom: 32px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-
-        .cart {
-            background-color: #ffffff;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            width: 100%;
-            flex: 1;
-        } 
-
-        .cart-details {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-grow: 1;
-        }
-
-        .cart-details img {
-            width: 60px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 5px;
-        }
-
-        .info {
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
             display: flex;
             flex-direction: column;
+            height: 96%;
+            margin-top: 10px;
+            align-items: center; 
+            padding: 10px; 
         }
 
-        .info p {
-            margin: 4px 0;
-            color: #4b5563;
+        .book-card:hover {
+            transform: translateY(-5px);
         }
 
-        .title {
-            font-weight: bold;
+        .book-image {
+            width: 110px;
+            height: auto;
+            object-fit: cover;
+            margin-top: 20px;
+        }
+
+        .book-info {
+            padding: 15px;
+            margin-top: auto;
+        }
+
+        .book-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .book-author {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .book-price {
             font-size: 1.4rem;
-        }
-
-        .author {
-            font-size: 1.2rem;
-            color: #6b7280;
-        }
-
-        .price {
+            font-weight: 700;
             color: var(--purple);
-            font-weight: bold;
-        }
-
-        .cart-actions {
-            right: 0%;
-        }
-
-        .add-to-cart {
-            background-color: var(--purple);
-            color: #ffffff;
-            padding: 10px 16px;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-size: 1.4rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .add-to-cart i {
-            font-size: 1.2rem;
-        }
-
-        .add-to-cart:hover {
-            background-color: #5a2c6b;
         }
 
         /* Footer Styles */
@@ -632,26 +477,6 @@ if ($buku = mysqli_fetch_assoc($query)) {
         .social-icons a:hover {
             color: var(--purple);
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .footer-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .footer-brand {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .footer-bottom {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-        }
-
     </style>
 </head>
 <body>
@@ -663,19 +488,22 @@ if ($buku = mysqli_fetch_assoc($query)) {
         </div>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
-                    <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
+                    <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="#">Buku Fiksi</a>
-                            <a href="#">Buku Nonfiksi</a>
-                            <a href="#">Buku Anak</a>
-                            <a href="#">Buku Pelajaran</a>
-                            <a href="#">Buku Agama</a>
-                            <a href="#">Komik</a>
+                            <a href="k_fiksi.html">Buku Fiksi</a>
+                            <a href="k_nonfiksi.html">Buku Nonfiksi</a>
+                            <a href="k_anak.html">Buku Anak</a>
+                            <a href="k_pelajaran.html">Buku Pelajaran</a>
+                            <a href="k_agama.html">Buku Agama</a>
+                            <a href="k_sejarah.html">Buku Sejarah</a>
+                            <a href="k_komik.html">Komik</a>
                         </div>
                     </div>
                 </div>
@@ -684,7 +512,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
                     <i class="ri-search-line"></i>
                 </div>
                 <div class="navbar-right">
-                    <a href="keranjang0.php" class="fas fa-shopping-cart"></a>
+                    <a href="#" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
@@ -693,12 +521,12 @@ if ($buku = mysqli_fetch_assoc($query)) {
                             <div class="profile-info">
                             <div class="profile-name"><?= $username ?></div>
                             <div class="profile-email"><?= $email ?></div>
-                        </div>
+                            </div>
                             <ul class="profile-menu">
                                 <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
                                 <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
                                 <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
@@ -706,99 +534,36 @@ if ($buku = mysqli_fetch_assoc($query)) {
             </nav>
         </div>
     </header>
-    
-    <!-- Breadcrumb -->
-    <div class="breadcrumb">
-        <nav>
-            <a href="after.php">Beranda</a> &gt; <span><?= $buku['judul']; ?></span>
-        </nav>
-    </div>
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="book-details">
-            <!-- Book Image -->
-            <img src="image/<?= $buku['gambar']; ?>" alt="<?= $buku['judul'] ?>">
-            <!-- Book Details -->
-            <div class="details">
-                <h1><?= $buku['judul'] ?></h1>
-                <p class="harga">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
-                <button id="favorite-button"><i class="far fa-heart"></i> Favorit</button>
-                <div class="post">
-                    <h2>Deskripsi</h2>
-                    <p><?= substr($buku['deskripsi'], 0, 300) ?></p>
-                    <p class="full-content" style="display: none; "><?= substr($buku['deskripsi'], 300) ?></p>
-                    <button class="read-more">Baca Selengkapnya</button>
-                </div>
-                
-                <h2>Detail Buku</h2>
-                <div class="book-info">
-                    <div>
-                        <p>Penerbit</p>
-                        <p class="font-semibold"><?= $buku['penerbit'] ?></p>
-                    </div>
-                    <div>
-                        <p>Tanggal Terbit</p>
-                        <p class="font-semibold"><?= date('j M Y', strtotime($buku['tanggal_terbit'])) ?></p>
-                    </div>
-                    <div>
-                        <p>ISBN</p>
-                        <p class="font-semibold"><?= $buku['isbn'] ?></p>
-                    </div>
-                    <div>
-                        <p>Halaman</p>
-                        <p class="font-semibold"><?= $buku['jumlah_halaman'] ?></p>
-                    </div>
-                    <div>
-                        <p>Bahasa</p>
-                        <p class="font-semibold"><?= $buku['bahasa'] ?></p>
-                    </div>
-                </div>
 
-            </div>
-        </div>
+    <!-- Category Content -->
+    <div class="category-header">
+        <h1 class="category-title"><?= $kategori['nama_kategori']; ?></h1>
+        <p class="category-description"><?= $kategori['deskripsi']; ?></p>
     </div>
-    <!-- produk terkait -->
-    <h2 class="title-card">Produk Terkait</h2>
-    <div class="wrapper-card">
-        <?php while ($buku = mysqli_fetch_assoc($queryBuku)) { ?>
-            <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
-        <div class="card">
-            <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
-            <p><small><?= $buku['penulis'] ?></small></p>
-            <p><?= $buku['judul'] ?></p>
-            <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
-        </div>
-        <?php } ?>
-    </div>
-    
-    <!-- Cart Section -->
-    <div class="cart-section">
-        <div class="cart">
-        <?php while ($buku = mysqli_fetch_assoc($queryBuku01)) { ?>
-            <div class="cart-details">
-            <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
-                <div class="info">
-                    <p class="author"><?= $buku['penulis'] ?></p>
-                    <p class="title"><?= $buku['judul'] ?></p>
-                    <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
+            
+            
+        <div class="books-container">
+            <?php while ($buku = mysqli_fetch_assoc($queryBuku)) { ?>
+                <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
+                <div class="book-card">
+                    <img src="image/<?= $buku['gambar']; ?>" alt="<?= $buku['judul']; ?>" class="book-image">
+                    <div class="book-info">
+                        <h3 class="book-title"><?= $buku['judul']; ?></h3>
+                        <p class="book-author"><?= $buku['penulis']; ?></p>
+                        <p class="book-price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
+                    </div>
                 </div>
-            </div>
-            <div class="cart-actions">
-                <button class="add-to-cart">+Keranjang</button>
-            </div>
             <?php } ?>
         </div>
-    </div>
-
-
-   <!-- Footer -->
-        <!-- Bagian Brand -->
-        <div class="footer-brand">
-            <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Bukabuku Logo">
-            <p>Toko buku online terbesar, terlengkap dan terpercaya di Indonesia</p>
-        </div>  
-    <footer class="footer">
     
+
+    <!-- Footer -->
+    <div class="footer-brand">
+        <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Bukabuku Logo">
+        <p>Toko buku online terbesar, terlengkap dan terpercaya di Indonesia</p>
+    </div>  
+    
+    <footer class="footer">
         <div class="footer-container">
             <!-- Grid Footer -->
             <div class="footer-grid">
@@ -810,7 +575,6 @@ if ($buku = mysqli_fetch_assoc($query)) {
                         <li><a href="#">Buku Best Seller</a></li>
                     </ul>
                 </div>
-                
                 
                 <!-- Kolom 2 -->
                 <div class="footer-column">
@@ -844,15 +608,50 @@ if ($buku = mysqli_fetch_assoc($query)) {
         </div>
     </footer>
 
-<script src="detail.js"></script>
+    <script>
+        // JavaScript to handle the dropdown behavior
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+            
+            // Keep dropdown open when moving between icon and menu
+            let dropdownTimeout;
+            
+            profileDropdown.addEventListener('mouseenter', function() {
+                clearTimeout(dropdownTimeout);
+                dropdownMenu.style.display = 'block';
+                setTimeout(() => {
+                    dropdownMenu.style.opacity = '1';
+                    dropdownMenu.style.visibility = 'visible';
+                }, 10);
+            });
+            
+            profileDropdown.addEventListener('mouseleave', function() {
+                // Start timeout when leaving the dropdown area
+                dropdownTimeout = setTimeout(() => {
+                    dropdownMenu.style.opacity = '0';
+                    dropdownMenu.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        dropdownMenu.style.display = 'none';
+                    }, 200);
+                }, 300); // 300ms delay before closing
+            });
+            
+            dropdownMenu.addEventListener('mouseenter', function() {
+                clearTimeout(dropdownTimeout);
+            });
+            
+            dropdownMenu.addEventListener('mouseleave', function() {
+                dropdownTimeout = setTimeout(() => {
+                    dropdownMenu.style.opacity = '0';
+                    dropdownMenu.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        dropdownMenu.style.display = 'none';
+                    }, 200);
+                }, 300);
+            });
+
+        });
+    </script>
 </body>
 </html>
-<?php
-}
-?>
-<!-- 
-    
-    <script src="desktop2.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script> 
-</body>
-</html> -->

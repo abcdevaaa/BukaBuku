@@ -1,3 +1,12 @@
+<?php
+include 'koneksi.php';
+
+$sql = "SELECT * FROM buku";
+$query = mysqli_query($koneksi, $sql);
+$queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
+
+?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
