@@ -14,10 +14,10 @@ if (mysqli_num_rows($query) == 1) {
     $_SESSION['username'] = $users['username'];
     $_SESSION['email'] = $users['email'];
 
-    header("location:after.php?login=sukses");
+    header("location:index.php?login=sukses");
     exit;
 } else {
-    header("location:after.php?login=gagal");
+    header("location:index.php?login=gagal");
     exit;
 }
 ?>

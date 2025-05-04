@@ -211,6 +211,41 @@ header {
     font-size: 1.4rem;
 }
 
+
+.empty-cart {
+    text-align: center;
+    padding: 30px 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 30px;
+}
+
+.empty-cart h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.empty-cart p {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.shop-button {
+    display: inline-block;
+    background-color: var(--purple);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.shop-button:hover {
+    background-color: #5a2c6b;
+}
+
+
 .cart-container {
     max-width: 800px;
     margin: auto;

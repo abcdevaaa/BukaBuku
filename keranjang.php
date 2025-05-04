@@ -1,9 +1,25 @@
 <?php
-include 'koneksi.php';
+session_start();
+include "koneksi.php";
+
+$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+
+$id_users = $_SESSION['id_users'];
+$total = 0;
+
+$query = mysqli_query($koneksi, "SELECT keranjang.jumlah, buku.* 
+    FROM keranjang  
+    JOIN buku ON keranjang.id_buku = buku.id_buku 
+    WHERE keranjang.id_users = $id_users");
+
+while ($buku = mysqli_fetch_assoc($query)) {
+    $subtotal = $buku['harga'] * $buku['jumlah'];
+    $total += $subtotal;
 
 $sql = "SELECT * FROM buku";
 $query = mysqli_query($koneksi, $sql);
-$queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
+
 
 ?>
 
@@ -27,9 +43,11 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
         </div>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
                     <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                   <div class="category-dropdown">
                       <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
@@ -47,9 +65,26 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
                 </div>
+                
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
-                    <div class="profile"></div>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
+                    <div class="profile-dropdown">
+                        <div class="profile-icon">
+                            <i class="ri-user-line"></i>
+                        </div>
+                        <div class="profile-dropdown-menu">
+                            <div class="profile-info">
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
+                            <ul class="profile-menu">
+                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </nav>
         </div>
@@ -70,47 +105,44 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
     
 
     <section class="cart-container">
+    <?php if (empty($keranjang)) : ?>
+        <div class="container">
+            <div class="empty-cart">
+                <h1>Keranjang Kamu Kosong</h1>
+                <p>Kami punya banyak buku yang siap memberi kamu kebahagiaan.<br>Yuk, belanja sekarang!</p>
+                <a href="index.php" class="shop-button">Mulai Belanja</a>
+            </div>
+        </div>
+    <?php  else : ?>
         <div class="cart-item">
             <div class="select-item">
                 <input type="checkbox" class="item-checkbox form-checkbox h-5 w-5 text-purple-600">
             </div>
-            <img src="image/toko buku abadi.avif" alt="Toko Buku Abadi">
+            <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul']; ?>">
             <div class="cart-details">
-                <h2>Toko Buku Abadi</h2>
-                <p class="author">Yudhi Herwibowo</p>
-                <p class="price">Rp90.000</p>
-                <div class="quantity">
+                <h2><?= $buku['judul'] ?></h2>
+                <p class="author"><?= $buku['penulis'] ?></p>
+                <p class="price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
+                <p class="quantity">Jumlah: <?= $buku['jumlah']; ?></p>
+                <!-- <div class="quantity">
                     <button class="minus">-</button>
                     <input type="number" value="1" min="1" class="quantity-input">
                     <button class="plus">+</button>
-                </div>
+                </div> -->
             </div>
-            <button class="remove"><i class="fas fa-trash"></i></button>
+            <form action="hapus_keranjang.php" method="POST">
+                <input type="hidden" name="id_buku" value="<?= $id_buku ?>">
+                <button type="submit" class="remove"><i class="fas fa-trash"></i></button>
+            </form>
         </div>
+        <?php endif; ?>
 
-        <div class="cart-item">
-            <div class="select-item">
-                <input type="checkbox" class="item-checkbox form-checkbox h-5 w-5 text-purple-600">
-            </div>
-            <img src="image/diaayahku.avif" alt="Dia Ayahku">
-            <div class="cart-details">
-                <h2>Dia Ayahku</h2>
-                <p class="author">Azila Khairunnisa</p>
-                <p class="price">Rp115.000</p>
-                <div class="quantity">
-                    <button class="minus">-</button>
-                    <input type="number" value="1" min="1" class="quantity-input">
-                    <button class="plus">+</button>
-                </div>
-            </div>
-            <button class="remove"><i class="fas fa-trash"></i></button>
-        </div>
     </section>
-
+<?php }?>
     <div class="box-check">
         <div class="cart-summary">
-            <p>Total: <span id="total-price">Rp205.000</span></p>
-            <button class="checkout">Checkout</button>
+            <p>Total: <span id="total-price">Rp<?= number_format($total, 0, ',', '.'); ?></span></p>
+            <a href="checkout.php"><button class="checkout">Checkout</button></a>
         </div>
     </div>
 

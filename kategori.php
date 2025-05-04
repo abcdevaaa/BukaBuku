@@ -512,15 +512,15 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                     <i class="ri-search-line"></i>
                 </div>
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                            <div class="profile-name"><?= $username ?></div>
-                            <div class="profile-email"><?= $email ?></div>
+                            <div class="profile-name">contoh</div>
+                            <div class="profile-email">contoh</div>
                             </div>
                             <ul class="profile-menu">
                                 <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
