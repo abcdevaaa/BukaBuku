@@ -1,6 +1,9 @@
 <?php
+session_start();
 include 'koneksi.php'; 
 
+$email = isset($_SESSION['email']);
+$username = isset($_SESSION['username']);
 $id_kategori = $_GET['id'];
 
 // Ambil data kategori
@@ -181,6 +184,64 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
             margin-left: 10px;
         }
 
+/* sebelum login */
+
+.navbar-right1 {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            color: #000;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .navbar-right1 {
+            gap: 130px;
+        }
+
+        .navbar-right1 a {
+            color: #000;
+        }
+
+        .navbar-right1 a:hover {
+            color: var(--purple);
+        }
+
+        .login {
+            display: flex;
+            gap: 10px;
+        }
+
+        .login .btn-masuk,
+        .login .btn-daftar {
+            font-size: 1.4rem;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .login .btn-masuk {
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+        }
+
+        .login .btn-masuk:hover {
+            background-color: #f0f0f0;
+        }
+
+        .login .btn-daftar {
+            background-color: var(--purple);
+            color: white;
+        }
+
+        .login .btn-daftar:hover {
+            background-color: #a56abd;
+        }
+
+        /* sesudah login */
+
         .navbar-right {
             gap: 130px;
         }
@@ -274,6 +335,7 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
         .profile-menu li a:hover i {
             color: var(--purple);
         }
+
 
         /* Breadcrumb */
         .breadcrumb {
@@ -511,6 +573,17 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
                 </div>
+                <?php if (!isset($_SESSION['id_users'])): ?>
+                    <!-- Jika belum login -->
+                <div class="navbar-right1">
+                    <a href="LoginRegister.php" class="fas fa-shopping-cart"></a>
+                    <div class="login">
+                    <a href="LoginRegister.php"><p class="btn-masuk">Masuk</p></a>
+                    <a href="LoginRegister.php"><p class="btn-daftar">Daftar</p></a>
+                    </div>
+                </div>
+
+                <?php else: ?>
                 <div class="navbar-right">
                     <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
@@ -519,18 +592,19 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                            <div class="profile-name">contoh</div>
-                            <div class="profile-email">contoh</div>
-                            </div>
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
                             <ul class="profile-menu">
                                 <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
                                 <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
                                 <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </nav>
         </div>
     </header>

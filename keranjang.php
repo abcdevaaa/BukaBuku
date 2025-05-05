@@ -2,24 +2,24 @@
 session_start();
 include "koneksi.php";
 
-$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+$email = isset($_SESSION['email']);
+$username = isset($_SESSION['username']);
 
 $id_users = $_SESSION['id_users'];
 $total = 0;
 
-$query = mysqli_query($koneksi, "SELECT keranjang.jumlah, buku.* 
+// $keranjang = [];
+$queryK = mysqli_query($koneksi, "SELECT keranjang.jumlah, buku.* 
     FROM keranjang  
     JOIN buku ON keranjang.id_buku = buku.id_buku 
     WHERE keranjang.id_users = $id_users");
 
-while ($buku = mysqli_fetch_assoc($query)) {
-    $subtotal = $buku['harga'] * $buku['jumlah'];
-    $total += $subtotal;
+$query = mysqli_query($koneksi,"SELECT * FROM buku");
+$queryB = mysqli_query($koneksi, "SELECT * FROM buku");
 
-$sql = "SELECT * FROM buku";
-$query = mysqli_query($koneksi, $sql);
-
+// while ($buku = mysqli_fetch_assoc($queryK)) {
+//     $subtotal = $buku['harga'] * $buku['jumlah'];
+//     $total += $subtotal;
 
 ?>
 
@@ -105,7 +105,7 @@ $query = mysqli_query($koneksi, $sql);
     
 
     <section class="cart-container">
-    <?php if (empty($keranjang)) : ?>
+    <?php if (mysqli_num_rows($queryK) == 0): ?>
         <div class="container">
             <div class="empty-cart">
                 <h1>Keranjang Kamu Kosong</h1>
@@ -114,6 +114,7 @@ $query = mysqli_query($koneksi, $sql);
             </div>
         </div>
     <?php  else : ?>
+        <?php while ($buku = mysqli_fetch_assoc($queryK)) { ?>
         <div class="cart-item">
             <div class="select-item">
                 <input type="checkbox" class="item-checkbox form-checkbox h-5 w-5 text-purple-600">
@@ -124,21 +125,22 @@ $query = mysqli_query($koneksi, $sql);
                 <p class="author"><?= $buku['penulis'] ?></p>
                 <p class="price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
                 <p class="quantity">Jumlah: <?= $buku['jumlah']; ?></p>
-                <!-- <div class="quantity">
+                <div class="quantity">
                     <button class="minus">-</button>
                     <input type="number" value="1" min="1" class="quantity-input">
                     <button class="plus">+</button>
-                </div> -->
+                </div>
             </div>
+            
             <form action="hapus_keranjang.php" method="POST">
-                <input type="hidden" name="id_buku" value="<?= $id_buku ?>">
+                <input type="hidden" name="id_buku" value="<?= $buku['id_buku'] ?>">
                 <button type="submit" class="remove"><i class="fas fa-trash"></i></button>
             </form>
         </div>
-        <?php endif; ?>
-
+        <?php } ?>
+    <?php endif; ?>
     </section>
-<?php }?>
+
     <div class="box-check">
         <div class="cart-summary">
             <p>Total: <span id="total-price">Rp<?= number_format($total, 0, ',', '.'); ?></span></p>

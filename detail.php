@@ -2,8 +2,8 @@
 session_start();
 include "koneksi.php";
 
-$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+$email = isset($_SESSION['email']);
+$username = isset($_SESSION['username']);
 
 $id_buku = $_GET['id_buku'];
 $sql = "SELECT * FROM buku WHERE id_buku = $id_buku";

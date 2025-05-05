@@ -2,8 +2,8 @@
 session_start();
 include 'koneksi.php';
  
-$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+$email = isset($_SESSION['email']);
+$username = isset($_SESSION['username']);
 
 $sql = "SELECT * FROM buku";
 $query = mysqli_query($koneksi, $sql);
@@ -620,7 +620,7 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
                                 <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
                                 <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
                                 <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>

@@ -24,6 +24,8 @@ document.addEventListener("DOMContentLoaded", function() {
         totalPriceElement.textContent = "Rp" + formatNumber(total);
     }
   
+    
+
     // Fungsi untuk memformat angka dengan titik sebagai pemisah ribuan
     function formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -132,27 +134,50 @@ document.addEventListener("DOMContentLoaded", function() {
             const emptyCartMessage = document.createElement("div");
             emptyCartMessage.className = "empty-cart";
             emptyCartMessage.innerHTML = `
-                <i class="fas fa-shopping-cart" style="font-size: 50px; color: #ccc; margin-bottom: 20px;"></i>
-                <h3>Keranjang Belanja Kosong</h3>
-                <p>Silakan tambahkan produk ke keranjang belanja Anda</p>
+                    <div class="empty-cart">
+                        <h1>Keranjang Kamu Kosong</h1>
+                        <p>Kami punya banyak buku yang siap memberi kamu kebahagiaan.<br>Yuk, belanja sekarang!</p>
+                        <a href="index.php" class="shop-button">Mulai Belanja</a>
+                    </div>
+                
             `;
             document.querySelector(".cart-container").appendChild(emptyCartMessage);
             
             // Tambahkan style untuk pesan keranjang kosong
             const style = document.createElement("style");
             style.textContent = `
-                .empty-cart {
-                    text-align: center;
-                    padding: 40px 20px;
-                    color: #666;
-                }
-                .empty-cart h3 {
-                    font-size: 1.8rem;
-                    margin-bottom: 10px;
-                }
-                .empty-cart p {
-                    font-size: 1.4rem;
-                }
+            .empty-cart {
+                text-align: center;
+                padding: 30px 0;
+                border-bottom: 1px solid #eee;
+                margin-bottom: 30px;
+            }
+
+            .empty-cart h1 {
+                font-size: 24px;
+                color: #333;
+                margin-bottom: 15px;
+            }
+
+            .empty-cart p {
+                color: #666;
+                margin-bottom: 25px;
+            }
+
+            .shop-button {
+                display: inline-block;
+                background-color: var(--purple);
+                color: white;
+                padding: 12px 25px;
+                border-radius: 5px;
+                text-decoration: none;
+                font-weight: bold;
+                transition: background-color 0.3s;
+            }
+
+            .shop-button:hover {
+                background-color: #5a2c6b;
+            }
             `;
             document.head.appendChild(style);
         } else {
