@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const cartItems = document.querySelectorAll(".cart-item");
         if (cartItems.length === 0) {
             const emptyCartMessage = document.createElement("div");
-            emptyCartMessage.className = "empty-cart";
+            emptyCartMessage.className = "empty-cart";[]
             emptyCartMessage.innerHTML = `
                     <div class="empty-cart">
                         <h1>Keranjang Kamu Kosong</h1>

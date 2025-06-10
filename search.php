@@ -1,21 +1,22 @@
 <?php
 session_start();
-include 'koneksi.php'; 
+include "koneksi.php";
 
-$email = isset($_SESSION['email']);
-$username = isset($_SESSION['username']);
-$id_kategori = $_GET['id'];
+if (isset($_GET['q'])) {
+    $q = $_GET['q'];
+} else {
+    $q = '';
+}
 
-// Ambil data kategori
-$queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori WHERE id_kategori = '$id_kategori'");
-// $kategori = mysqli_fetch_assoc($queryKategori);
+$sql = "SELECT * FROM buku WHERE judul LIKE '%$q%' OR penulis LIKE '%$q%'";
+$query = mysqli_query($koneksi, $sql);
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
-// Ambil data buku
-$queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id_kategori'");
+
 ?>
 
-<!DOCTYPE html>
+
+
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
@@ -23,7 +24,7 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.2.0/remixicon.css">
-    <title>Bukabuku - Kategori</title>
+    <title>Bukabuku</title>
     <style>
         
         :root {
@@ -185,9 +186,9 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
             margin-left: 10px;
         }
 
-/* sebelum login */
+        /* sebelum login */
 
-.navbar-right1 {
+        .navbar-right1 {
             display: flex;
             align-items: center;
             font-size: 1.5rem;
@@ -338,104 +339,113 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
         }
 
 
-        /* Breadcrumb */
-        .breadcrumb {
-            padding: 15px;
-            font-size: 1.4rem;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .breadcrumb a {
-            color: var(--purple);
-        }
-
-        .breadcrumb span {
-            color: #999;
-        }
-
-        /* Category Page */
-            .category-header {
-            background: linear-gradient(rgba(110, 52, 130, 0.8), rgba(110, 52, 130, 0.8)), 
-            url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            text-align: center;
-            padding: 80px 20px;
-            }
-
-        .category-title {
-            font-size: 2.5rem;
-            color: #fff;
-            margin-bottom: 10px;
-        }
-
-        .category-description {
-            font-size: 1.4rem;
-            color: #fff;
-            max-width: 800px;
+        /* Swiper */
+        .swiper-container {
+            width: 100%;
+            max-width: 1200px;
             margin: 0 auto;
-        }
-
-        .books-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
             padding: 20px;
-            margin: 0 auto;
         }
 
-        .book-card {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+        .swiper {
+            width: 100%;
+            height: 580px; /* Atur tinggi Swiper container */
+        }
+
+        .swiper-slide {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .swiper-slide img {
+            width: auto;
+            height: 100%;
+            object-fit: cover; /* Gambar menutupi slide tanpa terdistorsi */
+            border-radius: 10px;
+        }
+
+        /* Kategori Buku */
+        .container2 {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .category {
             display: flex;
             flex-direction: column;
-            height: 96%;
-            margin-top: 10px;
-            align-items: center; 
-            padding: 10px; 
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
         }
 
-        .book-card:hover {
-            transform: translateY(-5px);
+        .category:hover {
+            transform: scale(1.1);
         }
 
-        .book-image {
-            width: 110px;
+        .category img {
+            width: 100px;
+            height: 100px;
+        }
+
+        /* Rekomendasi Buku */
+        .title-card {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 2rem;
+        }
+
+        .wrapper-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, max-content));
+            justify-content: start; /* supaya grid menempel ke kiri */
+            gap: 20px;
+            padding: 20px;
+        }
+
+
+        .card {
+            background-color: white;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .card img {
+            width: 124px;
             height: auto;
             object-fit: cover;
-            margin-top: 20px;
         }
 
-        .book-info {
-            padding: 15px;
-            margin-top: auto;
+        .card p {
+            margin: 5px 0;
         }
 
-        .book-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #333;
+        .card small {
+            color: #888;
         }
 
-        .book-author {
-            font-size: 1.1rem;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .book-price {
-            font-size: 1.4rem;
-            font-weight: 700;
+        .card-price {
             color: var(--purple);
+            font-weight: bold;
         }
+
+        a {
+        color: inherit; /* pakai warna teks dari elemen di dalamnya */
+        text-decoration: none; /* hilangin garis bawah */
+        }
+
 
         /* Footer Styles */
         .footer-brand {
@@ -540,6 +550,25 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
         .social-icons a:hover {
             color: var(--purple);
         }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .footer-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .footer-brand {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .footer-bottom {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -551,11 +580,9 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
         </div>
         <div class="container">
             <nav class="navbar">
-                <a href="index.php">
                 <div class="logo-wrapper">
-                    <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Logo Bukabuku" class="logo">
+                    <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
-                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
@@ -568,10 +595,18 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                         </div>
                     </div>
                 </div>
-                <div class="navbar-middle">
+                
+                    <form action="search.php" method="GET">
+                        <div class="navbar-middle">
+                        <input type="text" name="q" placeholder="Cari Produk, Judul Buku, Penulis">
+                        <i class="ri-search-line"></i>
+                        </div>
+                    </form>
+                
+                <!-- <div class="navbar-middle">
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
-                </div>
+                </div> -->
                 <?php if (!isset($_SESSION['id_users'])): ?>
                     <!-- Jika belum login -->
                 <div class="navbar-right1">
@@ -597,7 +632,7 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                             <ul class="profile-menu">
                                 <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
                                 <li><a href="TransaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
                                 <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
@@ -608,38 +643,36 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
         </div>
     </header>
 
-    <!-- Category Content -->
-     <?php while($kategori = mysqli_fetch_assoc($queryKategori)) { ?>
-    <div class="category-header">
-        <h1 class="category-title"><?= $kategori['nama_kategori'] ?></h1>
-        <p class="category-description"><?= $kategori['deskripsi'] ?></p>
-    </div>
-    <?php } ?>
-            
-            
-        <div class="books-container">
-            <?php while ($buku = mysqli_fetch_assoc($queryBuku)) { ?>
+    <!-- Rekomendasi Buku -->
+
+    <div class="wrapper-card">
+        <?php if(mysqli_num_rows($query) > 0){ ?>
+            <?php while ($buku = mysqli_fetch_assoc($query)) { ?>
                 <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
-                <div class="book-card">
-                    <img src="image/<?= $buku['gambar']; ?>" alt="<?= $buku['judul'] ?>" class="book-image">
-                    <div class="book-info">
-                        <h3 class="book-title"><?= $buku['judul'] ?></h3>
-                        <p class="book-author"><?= $buku['penulis'] ?></p>
-                        <p class="book-price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
-                    </div>
-                </div>
+            <div class="card">
+                <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
+                <p><small><?= $buku['penulis'] ?></small></p>
+                <p><?= $buku['judul'] ?></p>
+                <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
+            </div>
             <?php } ?>
-            </a>
-        </div>
+        <?php } else { ?>
+
+        <?php } ?>
+        </a>
+    </div>
     
 
-    <!-- Footer -->
-    <div class="footer-brand">
-        <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Bukabuku Logo">
-        <p>Toko buku online terbesar, terlengkap dan terpercaya di Indonesia</p>
-    </div>  
     
+
+  <!-- Footer -->
+        <!-- Bagian Brand -->
+        <div class="footer-brand">
+            <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Bukabuku Logo">
+            <p>Toko buku online terbesar, terlengkap dan terpercaya di Indonesia</p>
+        </div>  
     <footer class="footer">
+    
         <div class="footer-container">
             <!-- Grid Footer -->
             <div class="footer-grid">
@@ -651,6 +684,7 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
                         <li><a href="#">Buku Best Seller</a></li>
                     </ul>
                 </div>
+                
                 
                 <!-- Kolom 2 -->
                 <div class="footer-column">
@@ -683,51 +717,73 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_kategori = '$id
             </div>
         </div>
     </footer>
-
+    
+    <!-- Script Swiper -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
-        // JavaScript to handle the dropdown behavior
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileDropdown = document.querySelector('.profile-dropdown');
-            const dropdownMenu = document.querySelector('.profile-dropdown-menu');
-            
-            // Keep dropdown open when moving between icon and menu
-            let dropdownTimeout;
-            
-            profileDropdown.addEventListener('mouseenter', function() {
-                clearTimeout(dropdownTimeout);
-                dropdownMenu.style.display = 'block';
-                setTimeout(() => {
-                    dropdownMenu.style.opacity = '1';
-                    dropdownMenu.style.visibility = 'visible';
-                }, 10);
-            });
-            
-            profileDropdown.addEventListener('mouseleave', function() {
-                // Start timeout when leaving the dropdown area
-                dropdownTimeout = setTimeout(() => {
-                    dropdownMenu.style.opacity = '0';
-                    dropdownMenu.style.visibility = 'hidden';
-                    setTimeout(() => {
-                        dropdownMenu.style.display = 'none';
-                    }, 200);
-                }, 300); // 300ms delay before closing
-            });
-            
-            dropdownMenu.addEventListener('mouseenter', function() {
-                clearTimeout(dropdownTimeout);
-            });
-            
-            dropdownMenu.addEventListener('mouseleave', function() {
-                dropdownTimeout = setTimeout(() => {
-                    dropdownMenu.style.opacity = '0';
-                    dropdownMenu.style.visibility = 'hidden';
-                    setTimeout(() => {
-                        dropdownMenu.style.display = 'none';
-                    }, 200);
-                }, 300);
-            });
-
+        const swiper = new Swiper('.swiper', {
+            loop: true,
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+            effect: 'slide',
+            direction: 'horizontal',
+            spaceBetween: 30,
         });
+
+    // JavaScript to handle the dropdown behavior
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+        
+        // Keep dropdown open when moving between icon and menu
+        let dropdownTimeout;
+        
+        profileDropdown.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+            dropdownMenu.style.display = 'block';
+            setTimeout(() => {
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+            }, 10);
+        });
+        
+        
+
+        profileDropdown.addEventListener('mouseleave', function() {
+            // Start timeout when leaving the dropdown area
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300); // 300ms delay before closing
+        });
+        
+        dropdownMenu.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+        });
+        
+        dropdownMenu.addEventListener('mouseleave', function() {
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300);
+        });
+    });
     </script>
 </body>
 </html>

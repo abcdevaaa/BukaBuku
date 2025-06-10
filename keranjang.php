@@ -9,13 +9,27 @@ $id_users = $_SESSION['id_users'];
 $total = 0;
 
 // $keranjang = [];
-$queryK = mysqli_query($koneksi, "SELECT keranjang.jumlah, buku.* 
+$queryK = mysqli_query($koneksi, "SELECT keranjang.jumlah, 
+    buku.id_buku, buku.id_kategori, buku.judul, buku.penulis, buku.penerbit,
+    buku.harga, buku.stok, buku.tanggal_terbit, buku.jumlah_halaman, buku.bahasa,
+    buku.isbn, buku.gambar, buku.deskripsi
     FROM keranjang  
     JOIN buku ON keranjang.id_buku = buku.id_buku 
     WHERE keranjang.id_users = $id_users");
 
+$keranjang = [];
+// Hitung total untuk item yang dicentang
+while ($buku = mysqli_fetch_assoc($queryK)) {
+    $subtotal = $buku['harga'] * $buku['jumlah'];
+    $total += $subtotal;
+    $keranjang[] = $buku;
+}
+// Reset pointer
+mysqli_data_seek($queryK, 0);
+
 $query = mysqli_query($koneksi,"SELECT * FROM buku");
 $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
 // while ($buku = mysqli_fetch_assoc($queryK)) {
 //     $subtotal = $buku['harga'] * $buku['jumlah'];
@@ -32,7 +46,7 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.2.0/remixicon.css">
     <title>Keranjang Belanja</title>
-    <link rel="stylesheet" href="keranjang.css">
+    <link rel="stylesheet" href="css/keranjang.css">
 </head>
 <body>
     <!-- Header -->
@@ -49,17 +63,16 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
                 </div>
                 </a>
                 <div class="navbar-left">
-                  <div class="category-dropdown">
-                      <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
-                      <div class="category-menu">
-                          <a href="#">Buku Fiksi</a>
-                          <a href="#">Buku Nonfiksi</a>
-                          <a href="#">Buku Anak</a>
-                          <a href="#">Buku Pelajaran</a>
-                          <a href="#">Buku Agama</a>
-                          <a href="#">Komik</a>
-                      </div>
-                  </div>
+                    <div class="category-dropdown">
+                        <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
+                        <div class="category-menu">
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
+                        </div>
+                    </div>
                 </div>
                 <div class="navbar-middle">
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
@@ -78,10 +91,10 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
                             <div class="profile-email"><?= $_SESSION['email'] ?></div>
                         </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="transaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
@@ -90,7 +103,7 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
         </div>
     </header>
     
-    <main class="main">
+    <!-- <main class="main">
         <div class="controls">
             <div class="select-all">
                 <input type="checkbox" id="select-all" class="form-checkbox h-5 w-5 text-purple-600"/>
@@ -101,52 +114,58 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
                 <span>Hapus</span>
             </button>
         </div>
-    </main>
+    </main> -->
     
-
+    
     <section class="cart-container">
     <?php if (mysqli_num_rows($queryK) == 0): ?>
-        <div class="container">
-            <div class="empty-cart">
-                <h1>Keranjang Kamu Kosong</h1>
-                <p>Kami punya banyak buku yang siap memberi kamu kebahagiaan.<br>Yuk, belanja sekarang!</p>
-                <a href="index.php" class="shop-button">Mulai Belanja</a>
-            </div>
+        
+        <div class="empty-cart">
+            <h1>Keranjang Kamu Kosong</h1>
+            <p>Kami punya banyak buku yang siap memberi kamu kebahagiaan.<br>Yuk, belanja sekarang!</p>
+            <a href="index.php" class="shop-button">Mulai Belanja</a>
         </div>
-    <?php  else : ?>
-        <?php while ($buku = mysqli_fetch_assoc($queryK)) { ?>
-        <div class="cart-item">
-            <div class="select-item">
-                <input type="checkbox" class="item-checkbox form-checkbox h-5 w-5 text-purple-600">
-            </div>
-            <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul']; ?>">
-            <div class="cart-details">
-                <h2><?= $buku['judul'] ?></h2>
-                <p class="author"><?= $buku['penulis'] ?></p>
-                <p class="price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
-                <p class="quantity">Jumlah: <?= $buku['jumlah']; ?></p>
-                <div class="quantity">
-                    <button class="minus">-</button>
-                    <input type="number" value="1" min="1" class="quantity-input">
-                    <button class="plus">+</button>
+        <?php  else : ?>
+            <form action="checkout.php" method="POST" id="formCheckout">
+            <?php while ($buku = mysqli_fetch_assoc($queryK)) { ?>
+            <div class="cart-item">
+                <div class="select-item">
+                    <input type="checkbox" class="item-checkbox form-checkbox h-5 w-5 text-purple-600" 
+                    name="keranjang[]" value="<?= $buku['id_buku'] ?>" 
+                    data-id="<?= $buku['id_buku'] ?>" 
+                    data-harga="<?= $buku['harga'] ?>">
                 </div>
+                <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
+                <div class="cart-details">
+                    <h2><?= $buku['judul'] ?></h2>
+                    <p class="author"><?= $buku['penulis'] ?></p>
+                    <p class="price">Rp<?= number_format($buku['harga'], 0, ',', '.'); ?></p>
+                    
+                    <div class="quantity">
+                        <button class="minus" data-id="<?= $buku['id_buku'] ?>">-</button>
+                        <input type="number" class="quantity-input" data-id="<?= $buku['id_buku'] ?>" value="<?= $buku['jumlah'] ?>" min="1">
+                        <button class="plus" data-id="<?= $buku['id_buku'] ?>">+</button>
+                    </div>
+                </div>
+                
+                <button type="button" class="remove" onclick="hapusItem(<?= $buku['id_buku'] ?>)">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
-            
-            <form action="hapus_keranjang.php" method="POST">
-                <input type="hidden" name="id_buku" value="<?= $buku['id_buku'] ?>">
-                <button type="submit" class="remove"><i class="fas fa-trash"></i></button>
-            </form>
+            <?php } ?>
+        
+        
+        <div class="box-check">
+        <div class="cart-summary">
+            <p>Total: <span id="total-price">Rp<?= number_format($total, 0, ',', '.'); ?></span></p>
+            <button type="submit" class="checkout">Checkout</button>
         </div>
-        <?php } ?>
+        </div>
+        </form>
     <?php endif; ?>
     </section>
 
-    <div class="box-check">
-        <div class="cart-summary">
-            <p>Total: <span id="total-price">Rp<?= number_format($total, 0, ',', '.'); ?></span></p>
-            <a href="checkout.php"><button class="checkout">Checkout</button></a>
-        </div>
-    </div>
+    
 
     <div class="wrapper-card">
         <?php while ($buku = mysqli_fetch_assoc($query)) { ?>
@@ -158,6 +177,7 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
             <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.'); ?></p>
         </div>
         <?php } ?>
+        </a>
     </div>
     <!-- Footer -->
         <!-- Bagian Brand -->
@@ -211,7 +231,169 @@ $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
         </div>
     </div>
   </footer>
+<script>
+  // JavaScript to handle the dropdown behavior
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+        
+        // Keep dropdown open when moving between icon and menu
+        let dropdownTimeout;
+        
+        profileDropdown.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+            dropdownMenu.style.display = 'block';
+            setTimeout(() => {
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+            }, 10);
+        });
 
-    <script src="keranjang.js"></script>
+        profileDropdown.addEventListener('mouseleave', function() {
+            // Start timeout when leaving the dropdown area
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300); // 300ms delay before closing
+        });
+        
+        dropdownMenu.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+        });
+        
+        dropdownMenu.addEventListener('mouseleave', function() {
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300);
+        });
+    });
+
+
+//update jumlah
+
+document.querySelectorAll('.plus').forEach(button => {
+    button.addEventListener('click', () => {
+        const idBuku = button.getAttribute('data-id');
+        const input = document.querySelector(`.quantity-input[data-id="${idBuku}"]`);
+        let jumlah = parseInt(input.value);
+        jumlah++;
+        input.value = jumlah;
+
+        updateJumlah(idBuku, jumlah);
+    });
+});
+
+document.querySelectorAll('.minus').forEach(button => {
+    button.addEventListener('click', () => {
+        const idBuku = button.getAttribute('data-id');
+        const input = document.querySelector(`.quantity-input[data-id="${idBuku}"]`);
+        let jumlah = parseInt(input.value);
+        if (jumlah > 1) {
+            jumlah--;
+            input.value = jumlah;
+            updateJumlah(idBuku, jumlah);
+        }
+    });
+});
+
+function updateJumlah(idBuku, jumlah) {
+    fetch('update_keranjang.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `id_buku=${idBuku}&jumlah=${jumlah}`
+    })
+    .then(response => response.text())
+    .then(data => {
+        if (data !== 'ok') {
+            alert('Gagal update jumlah: ' + data);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// total
+
+
+function updateTotal() {
+    let total = 0;
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            const harga = parseInt(cb.dataset.harga);
+            const id = cb.dataset.id;
+            const qtyInput = document.querySelector(`.quantity-input[data-id="${id}"]`);
+            const jumlah = parseInt(qtyInput.value);
+            total += harga * jumlah;
+        }
+    });
+
+    document.getElementById('total-price').textContent = 'Rp' + total.toLocaleString('id-ID');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Update total saat checkbox atau jumlah berubah
+    document.querySelectorAll('.item-checkbox, .quantity-input').forEach(el => {
+        el.addEventListener('change', updateTotal);
+    });
+
+    // Untuk tombol + dan -
+    document.querySelectorAll('.plus, .minus').forEach(button => {
+        button.addEventListener('click', () => {
+            setTimeout(updateTotal, 100); // delay singkat supaya value input sudah berubah
+        });
+    });
+
+    updateTotal(); // Jalankan pertama kali
+});
+
+// Fungsi hapus item
+function hapusItem(idBuku) {
+    if (confirm('Apakah Anda yakin ingin menghapus item ini dari keranjang?')) {
+        fetch('hapus_keranjang.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id_buku=${idBuku}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Refresh halaman atau hapus elemen dari DOM
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menghapus item');
+        });
+    }
+}
+
+document.getElementById('formCheckout').addEventListener('submit', function(e) {
+    const checkedItems = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkedItems.length === 0) {
+        e.preventDefault();
+        alert('Pilih minimal 1 buku untuk checkout!');
+    }
+});
+
+</script>
+    <!-- <script src="keranjang.js"></script> -->
 </body>
 </html>

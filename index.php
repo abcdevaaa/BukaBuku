@@ -8,6 +8,7 @@ $username = isset($_SESSION['username']);
 $sql = "SELECT * FROM buku";
 $query = mysqli_query($koneksi, $sql);
 $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
 
 ?>
@@ -581,19 +582,26 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="#">Buku Fiksi</a>
-                            <a href="#">Buku Nonfiksi</a>
-                            <a href="#">Buku Anak</a>
-                            <a href="#">Buku Pelajaran</a>
-                            <a href="#">Buku Agama</a>
-                            <a href="#">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
-                <div class="navbar-middle">
+                
+                    <form action="search.php" method="GET">
+                        <div class="navbar-middle">
+                        <input type="text" name="q" placeholder="Cari Produk, Judul Buku, Penulis">
+                        <i class="ri-search-line"></i>
+                        </div>
+                    </form>
+                
+                <!-- <div class="navbar-middle">
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
-                </div>
+                </div> -->
                 <?php if (!isset($_SESSION['id_users'])): ?>
                     <!-- Jika belum login -->
                 <div class="navbar-right1">
@@ -617,9 +625,9 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
                             <div class="profile-email"><?= $_SESSION['email'] ?></div>
                         </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="TransaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
                                 <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
@@ -663,16 +671,18 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
     <!-- Rekomendasi Buku -->
     <h2 class="title-card">Rekomendasi Untukmu</h2>
     <div class="wrapper-card">
-    <?php while ($buku = mysqli_fetch_assoc($query)) { ?>
-        <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
-    <div class="card">
-        <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
-        <p><small><?= $buku['penulis'] ?></small></p>
-        <p><?= $buku['judul'] ?></p>
-        <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
+        <?php while ($buku = mysqli_fetch_assoc($query)) { ?>
+            <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>">
+        <div class="card">
+            <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
+            <p><small><?= $buku['penulis'] ?></small></p>
+            <p><?= $buku['judul'] ?></p>
+            <p class="card-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
+        </div>
+        <?php } ?>
+        </a>
     </div>
-    <?php } ?>
-    </div>
+    
 
     
 
@@ -768,6 +778,8 @@ $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
             }, 10);
         });
         
+        
+
         profileDropdown.addEventListener('mouseleave', function() {
             // Start timeout when leaving the dropdown area
             dropdownTimeout = setTimeout(() => {

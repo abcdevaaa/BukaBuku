@@ -1,18 +1,26 @@
 <?php
+session_start();
 include "koneksi.php";
+
 $username = $_POST['username'];
 $email = $_POST['email'];
 $password = $_POST['password'];
+$role = $_POST['role'];
 
-$sql = "INSERT INTO users(username, email, password) VALUES ('$username','$email', md5('$password'))";
-$query = mysqli_query($koneksi,$sql);
+$cekUser = mysqli_query($koneksi, "SELECT * FROM users WHERE email = '$email'");
 
-if ($query) {
-    header ("location:LoginRegister.php?register=sukses");
-    exit;
+if (mysqli_num_rows($cekUser) > 0) {
+    echo "<script>alert('Email sudah terdaftar!'); window.location.href='loginregister.php';</script>";
+    return;
 } else {
-    header ("location:register.php?register=gagal");
-    exit;
-}
+    $tambahUser = mysqli_query($koneksi, "INSERT INTO users(username, email, password, role) VALUES ('$username','$email', md5('$password'), 'user')");
 
+    if ($tambahUser) {
+        echo "<script>alert('Email berhasil terdaftar!'); window.location.href='loginregister.php';</script>";
+        exit;
+    } else {
+        echo "<script>alert('Email gagal terdaftar!'); window.location.href='loginregister.php';</script>";
+        exit;
+    }
+}
 ?>

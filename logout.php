@@ -1,7 +1,18 @@
 <?php
 session_start();
-session_destroy();
-header ("location:index.php?logout=sukses");
-exit;
 
+// Simpan role jika perlu arahkan berdasarkan role
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : null;
+
+// Hancurkan session
+session_unset();
+session_destroy();
+
+// Redirect berdasarkan role
+if ($role == 'user') {
+    header("Location:index.php");
+} else {
+    header("Location:LoginRegister.php");
+}
+exit;
 ?>

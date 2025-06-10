@@ -10,6 +10,7 @@ $sql = "SELECT * FROM buku WHERE id_buku = $id_buku";
 $query = mysqli_query($koneksi, $sql);
 $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku");
 $queryBuku01 = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_buku = $id_buku");
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
 if ($buku = mysqli_fetch_assoc($query)) {
 
@@ -546,7 +547,6 @@ if ($buku = mysqli_fetch_assoc($query)) {
             border: none;
             cursor: pointer;
             font-size: 1.4rem;
-            display: flex;
             align-items: center;
             gap: 8px;
         }
@@ -557,6 +557,26 @@ if ($buku = mysqli_fetch_assoc($query)) {
 
         .add-to-cart:hover {
             background-color: #5a2c6b;
+        }
+
+        .add-cart {
+            background-color: #fff;
+            color: #5a2c6b;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 0.2px solid #888;
+            cursor: pointer;
+            font-size: 1.4rem;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-cart i {
+            font-size: 1.2rem;
+        }
+
+        .add-cart:hover {
+            background-color: #f0f0f0;
         }
 
         /* Footer Styles */
@@ -702,12 +722,11 @@ if ($buku = mysqli_fetch_assoc($query)) {
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="#">Buku Fiksi</a>
-                            <a href="#">Buku Nonfiksi</a>
-                            <a href="#">Buku Anak</a>
-                            <a href="#">Buku Pelajaran</a>
-                            <a href="#">Buku Agama</a>
-                            <a href="#">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
@@ -738,10 +757,10 @@ if ($buku = mysqli_fetch_assoc($query)) {
                             <div class="profile-email"><?= $_SESSION['email'] ?></div>
                         </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="TransaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
@@ -824,8 +843,10 @@ if ($buku = mysqli_fetch_assoc($query)) {
                 </div>
             </div>
             <div class="cart-actions">
-                <a href="tambah_keranjang.php?id_buku=<?= $buku['id_buku'] ?>" class="add-to-cart">+Keranjang</a>
+                <a href="tambah_keranjang.php?id_buku=<?= $buku['id_buku'] ?>" class="add-cart">Keranjang</a>
+                <a href="checkout.php?id_buku=<?= $buku['id_buku'] ?>" class="add-to-cart">Beli Sekarang</a>
             </div>
+            
             <?php } ?>
             
         </div>
@@ -884,6 +905,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
             </div>
         </div>
     </footer>
+
 
 <script src="detail.js"></script>
 </body>

@@ -15,6 +15,6 @@ if (mysqli_num_rows($query) > 0) {
     mysqli_query($koneksi, "INSERT INTO keranjang (id_users, id_buku, jumlah) VALUES ($id_users, $id_buku, 1)");
 }
 
-header("Location:keranjang.php");
+header("Location:detail.php?id_buku=$id_buku");
 exit;
 ?>
