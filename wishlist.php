@@ -12,6 +12,14 @@ $query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username
 $user = mysqli_fetch_assoc($query);
 
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
+
+$id_users = $_SESSION['id_users'];
+$queryWishlist = mysqli_query($koneksi, 
+    "SELECT b.* FROM buku b 
+    JOIN wishlist w ON b.id_buku = w.id_buku 
+    WHERE w.id_users = '$id_users'");
+
+$jumlah_barang = mysqli_num_rows($queryWishlist);
 ?>
 <html lang="en">
 <head>
@@ -381,108 +389,90 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
         
         .content {
             flex: 1;
-            min-width: 300px;
             background-color: white;
             border-radius: 5px;
             padding: 20px;
         }
+
+        .section-title {
+            font-size: 2.4rem;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 600;
+        }
         
-        .profile-header {
+        .wishlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .wishlist-count {
+            font-size: 1.4rem;
+            color: #666;
+        }
+        
+        .wishlist-horizontal-container {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 15px 0;
+            margin-top: 20px;
+        }
+
+        .wishlist-item-horizontal {
+            min-width: 100px;
+            border: 1px solid #eee;
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wishlist-img-horizontal {
+            width: 100px;
+            height: auto;
+            background-color: #f5f5f5;
             display: flex;
             align-items: center;
-            margin-bottom: 30px;
-        }
-        
-        .profile-pic {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background-color: #eee;
-            margin-right: 20px;
+            justify-content: center;
+            border-radius: 5px;
             overflow: hidden;
-            position: relative;
         }
-        
-        .profile-pic img {
+
+        .wishlist-img-horizontal img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        
-        .profile-info h2 {
-            margin-bottom: 5px;
-            font-size: 1.5rem;
-        }
-        
-        .profile-info p {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        .form-group input, 
-        .form-group select {
+
+        .wishlist-details-horizontal {
+            text-align: center;
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        
-        .form-note {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        .btn {
-            background-color: var(--purple);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-        
-        .btn:hover {
-            background-color: #49225b;
-        }
-        
-        .weather-info {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 10px;
-            font-size: 0.9rem;
-            color: #666;
         }
 
-        .error-message {
-            color: red;
-            font-size: 1.2rem;
-            margin-top: 5px;
+        .wishlist-author {
+            font-size: 1.1rem;
+            color: #7F7F7F;
         }
-        
-        .success-message {
-            color: green;
+
+        .wishlist-title {
             font-size: 1.2rem;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
+            color: #333;
+            margin: 5px 0;
         }
-        
+
+        .wishlist-price {
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: bold;
+        }
+       
         /* Footer Styles */
         .footer-brand {
             display: flex;
@@ -700,6 +690,7 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
             </nav>
         </div>
     </header>
+
         <div class="container">
         <div class="main-content">
             <div class="sidebar">
@@ -708,8 +699,8 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
                     <ul class="sidebar-menu">
                         <h3 class="sidebar-title">Akun Saya</h3>
                         <ul class="sidebar-menu">
-                            <li><a href="akunU.php" class="active">Pengaturan Profil</a></li>
-                        <li><a href="wishlist.php">Wishlist</a></li>
+                            <li><a href="akunU.php" >Pengaturan Profil</a></li>
+                        <li><a href="wishlish.php" class="active">Wishlist</a></li>
                         <li><a href="transaksiU.php">Transaksi</a></li>
                         <li><a href="alamat.php">Alamat</a></li>
                     </ul>
@@ -717,77 +708,38 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
             </div>
             
             <div class="content">
-        <div class="profile-header">
-            <div class="profile-pic">
-                <?php if (!empty($user['profil'])) : ?>
-                    <img src="image/<?= $user['profil'] ?>" alt="Foto Profil">
-                <?php else: ?>
-                    <div class="profile-pic-placeholder">
-                        <i class="ri-user-fill" style="font-size: 3rem; color: #666;"></i>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div class="profile-info">
-                <h2><?= htmlspecialchars($user['username']) ?></h2>
-                <p><?= htmlspecialchars($user['email']) ?></p>
-            </div>
-        </div>
-        
-        <?php if (isset($_GET['success'])): ?>
-            <div class="success-message">
-                Profil berhasil diperbarui!
-            </div>
-        <?php endif; ?>
-        
-        <?php if (isset($_GET['error'])): ?>
-            <div class="error-message">
-                <?php 
-                $error = $_GET['error'];
-                if ($error == 'filetype') {
-                    echo 'Format file harus jpg, jpeg, atau png.';
-                } elseif ($error == 'filesize') {
-                    echo 'Ukuran file maksimal 2MB.';
-                } elseif ($error == 'upload') {
-                    echo 'Gagal mengupload gambar.';
-                } else {
-                    echo 'Gagal memperbarui profil.';
-                }
-                ?>
-            </div>
-        <?php endif; ?>
-        
-        <form method="POST" action="update_profil.php" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="<?= htmlspecialchars($user['username']) ?>" required>
-            </div>
+                <h1 class="section-title">Wishlist</h1>
+                
+                <div class="wishlist-header">
+                    <div class="wishlist-count"><?= $jumlah_barang ?> Barang</div>
+                </div>
             
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required>
+                <div class="wishlist-horizontal-container">
+                    <?php if ($jumlah_barang > 0): ?>
+                        <?php while ($buku = mysqli_fetch_assoc($queryWishlist)): ?>
+                            <!-- Item Wishlist -->
+                            <div class="wishlist-item-horizontal">
+                                <div class="wishlist-img-horizontal">
+                                    <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
+                                </div>
+                                <div class="wishlist-details-horizontal">
+                                    <div class="wishlist-author"><?= $buku['penulis'] ?></div>
+                                    <div class="wishlist-title"><?= $buku['judul'] ?></div>
+                                    <div class="wishlist-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></div>
+                                    <div class="wishlist-actions">
+                                        <a href="hapus_wishlist.php?id_buku=<?= $buku['id_buku'] ?>" class="remove-btn">Hapus</a>
+                                        <a href="checkout2.php?id_buku=<?= $buku['id_buku'] ?>" class="buy-btn">Beli Sekarang</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <p class="empty-wishlist">Wishlist Anda masih kosong</p>
+                    <?php endif; ?>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label for="photo">Ubah Foto Profil</label>
-                <input type="file" id="photo" name="photo" accept="image/jpeg, image/png, image/jpg">
-                <p class="form-note">Format foto harus jpg, jpeg, png dan ukuran file max 2MB.</p>
-            </div>
-            
-            <!-- <div class="form-group">
-                <label for="password">Kata Sandi Baru (Biarkan kosong jika tidak ingin mengubah)</label>
-                <input type="password" id="password" name="password">
-                <p class="form-note">Minimal 6 karakter.</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="current_password">Kata Sandi Saat Ini (Diperlukan untuk perubahan)</label>
-                <input type="password" id="current_password" name="current_password" required>
-            </div> -->
-            
-            <button type="submit" class="btn">Simpan Perubahan</button>
-        </form>
     </div>
-            </div>
+    
       
     <!-- Footer -->
         <!-- Bagian Brand -->
@@ -841,92 +793,50 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
           </div>
       </div>
     </footer>
-
     <script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Preview gambar profil
-        const photoInput = document.getElementById('photo');
-        const profilePic = document.querySelector('.profile-pic');
-        
-        if (photoInput && profilePic) {
-            photoInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    if (!file.type.match('image.*')) {
-                        alert('Format file harus gambar (jpg, jpeg, png)');
-                        this.value = '';
-                        return;
-                    }
-                    
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert('Ukuran file maksimal 2MB');
-                        this.value = '';
-                        return;
-                    }
-                    
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        // Hapus placeholder jika ada
-                        const placeholder = profilePic.querySelector('.profile-pic-placeholder');
-                        if (placeholder) {
-                            profilePic.removeChild(placeholder);
-                        }
-                        
-                        // Buat atau update img element
-                        let img = profilePic.querySelector('img');
-                        if (!img) {
-                            img = document.createElement('img');
-                            profilePic.appendChild(img);
-                        }
-                        img.src = event.target.result;
-                        img.alt = "Foto Profil Preview";
-                    };
-                    reader.readAsDataURL(file);
-                }
+        // JavaScript to handle the dropdown behavior
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+            
+            // Keep dropdown open when moving between icon and menu
+            let dropdownTimeout;
+            
+            profileDropdown.addEventListener('mouseenter', function() {
+                clearTimeout(dropdownTimeout);
+                dropdownMenu.style.display = 'block';
+                setTimeout(() => {
+                    dropdownMenu.style.opacity = '1';
+                    dropdownMenu.style.visibility = 'visible';
+                }, 10);
             });
-        }
-        
-        // Form validation
-        const form = document.querySelector('form');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const username = document.getElementById('username').value.trim();
-                const email = document.getElementById('email').value.trim();
-                const currentPassword = document.getElementById('current_password').value;
-                
-                if (!username) {
-                    alert('Username harus diisi');
-                    e.preventDefault();
-                    return;
-                }
-                
-                if (!email) {
-                    alert('Email harus diisi');
-                    e.preventDefault();
-                    return;
-                } else if (!/^\S+@\S+\.\S+$/.test(email)) {
-                    alert('Email tidak valid');
-                    e.preventDefault();
-                    return;
-                }
-                
-                if (!currentPassword) {
-                    alert('Kata sandi saat ini diperlukan untuk verifikasi');
-                    e.preventDefault();
-                    return;
-                }
-                
-                const password = document.getElementById('password').value;
-                if (password && password.length < 6) {
-                    alert('Password baru minimal 6 karakter');
-                    e.preventDefault();
-                    return;
-                }
+            
+            profileDropdown.addEventListener('mouseleave', function() {
+                // Start timeout when leaving the dropdown area
+                dropdownTimeout = setTimeout(() => {
+                    dropdownMenu.style.opacity = '0';
+                    dropdownMenu.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        dropdownMenu.style.display = 'none';
+                    }, 200);
+                }, 300); // 300ms delay before closing
             });
-        }
-    });
-    </script>
+            
+            dropdownMenu.addEventListener('mouseenter', function() {
+                clearTimeout(dropdownTimeout);
+            });
+            
+            dropdownMenu.addEventListener('mouseleave', function() {
+                dropdownTimeout = setTimeout(() => {
+                    dropdownMenu.style.opacity = '0';
+                    dropdownMenu.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        dropdownMenu.style.display = 'none';
+                    }, 200);
+                }, 300);
+            });
+        });
 
+    </script>
 </body>
 </html>

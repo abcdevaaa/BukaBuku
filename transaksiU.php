@@ -1,3 +1,68 @@
+<?php
+session_start();
+include 'koneksi.php';
+ 
+$email = isset($_SESSION['email']);
+$username = isset($_SESSION['username']);
+
+// Check if user is logged in
+if (!isset($_SESSION['username'])) {
+    header("Location: LoginRegister.php");
+    exit();
+}
+
+// Get user ID from session
+$id_users = $_SESSION['id_users'];
+
+// Query to get all transactions for this user
+$queryPesanan = mysqli_query($koneksi, "SELECT p.*, a.nama_penerima, a.alamat_lengkap, 
+                                        mp.nama_metode as metode_pembayaran_nama,
+                                        mpg.nama_metode as metode_pengiriman_nama
+                                        FROM pesanan p
+                                        JOIN alamat a ON p.id_alamat = a.id_alamat
+                                        LEFT JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran
+                                        LEFT JOIN metode_pengiriman mpg ON p.metode_pengiriman = mpg.id_metodePengiriman
+                                        WHERE p.id_users = $id_users
+                                        ORDER BY p.tanggal_pesanan DESC");
+
+// Query for categories (used in header)
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
+
+// Function to format date
+function formatTanggal($datetime) {
+    $bulan = array(
+        1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    );
+    
+    $date = new DateTime($datetime);
+    $tanggal = $date->format('d');
+    $bulan = $bulan[(int)$date->format('m')];
+    $tahun = $date->format('Y');
+    $waktu = $date->format('H:i:s');
+    
+    return "$tanggal $bulan $tahun, $waktu";
+}
+
+// Function to get status badge class
+function getStatusBadgeClass($status) {
+    switch ($status) {
+        case 'menunggu pembayaran':
+            return 'waiting';
+        case 'pesanan diproses':
+            return 'processing';
+        case 'pesanan dikirim':
+            return 'shipped';
+        case 'pesanan diterima':
+            return 'completed';
+        case 'pesanan dibatalkan':
+            return 'cancelled';
+        default:
+            return '';
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -756,20 +821,20 @@
         </div>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
-                    <img src="image/Navy_Colorful_fun_Kids_Book_Store_Logo.png" alt="Logo Bukabuku" class="logo">
+                    <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="k_fiksi.html">Buku Fiksi</a>
-                            <a href="k_nonfiksi.html">Buku Nonfiksi</a>
-                            <a href="k_anak.html">Buku Anak</a>
-                            <a href="k_pelajaran.html">Buku Pelajaran</a>
-                            <a href="k_agama.html">Buku Agama</a>
-                            <a href="k_sejarah.html">Buku Sejarah</a>
-                            <a href="k_komik.html">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
@@ -777,27 +842,29 @@
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
                 </div>
+                
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                                <div class="profile-name">Adelia</div>
-                                <div class="profile-email">adeliasa@gmail.com</div>
-                            </div>
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#" class="active"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="transaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </nav>
+        </div>
         </div>
     </header>
 
@@ -808,10 +875,10 @@
                 <div class="sidebar-section">
                     <h3 class="sidebar-title">Akun Saya</h3>
                     <ul class="sidebar-menu">
-                        <li><a href="#">Pengaturan Profil</a></li>
-                        <li><a href="#">Wishlist</a></li>
-                        <li><a href="#" class="active">Transaksi</a></li>
-                        <li><a href="#">Alamat</a></li>
+                        <li><a href="akunU.php">Pengaturan Profil</a></li>
+                        <li><a href="wishlist.php">Wishlist</a></li>
+                        <li><a href="transaksiU.php" class="active">Transaksi</a></li>
+                        <li><a href="alamat.php">Alamat</a></li>
                     </ul>
                 </div>
             </div>
@@ -829,196 +896,79 @@
                         </button>
                         <div class="dropdown-options">
                             <a href="#" data-status="all">Semua Status</a>
-                            <a href="#" data-status="waiting">Menunggu Pembayaran</a>
-                            <a href="#" data-status="processing">Pesanan Diproses</a>
-                            <a href="#" data-status="shipped">Pesanan Dikirim</a>
-                            <a href="#" data-status="completed">Pesanan Diterima</a>
-                            <a href="#" data-status="cancelled">Pesanan Dibatalkan</a>
-                            <a href="#" data-status="returned">Pesanan Dikembalikan</a>
+                            <a href="#" data-status="menunggu pembayaran">Menunggu Pembayaran</a>
+                            <a href="#" data-status="pesanan diproses">Pesanan Diproses</a>
+                            <a href="#" data-status="pesanan dikirim">Pesanan Dikirim</a>
+                            <a href="#" data-status="pesanan diterima">Pesanan Diterima</a>
+                            <a href="#" data-status="pesanan dibatalkan">Pesanan Dibatalkan</a>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Transaction 1 - Menunggu Pembayaran -->
-                <div class="transaction-card" data-status="waiting">
+                <?php
+                if (mysqli_num_rows($queryPesanan) > 0) {
+                    while ($pesanan = mysqli_fetch_assoc($queryPesanan)) {
+                        // Get order details
+                        $queryDetail = mysqli_query($koneksi, "SELECT dp.*, b.judul, b.gambar 
+                                                              FROM detailpesanan dp
+                                                              JOIN buku b ON dp.id_buku = b.id_buku
+                                                              WHERE dp.id_pesanan = {$pesanan['id_pesanan']}");
+                        $jumlahBarang = mysqli_num_rows($queryDetail);
+                        
+                        // Format data
+                        $status = $pesanan['status'];
+                        $statusClass = getStatusBadgeClass($status);
+                        $formattedDate = formatTanggal($pesanan['tanggal_pesanan']);
+                        $totalHarga = number_format($pesanan['total_belanja'], 0, ',', '.');
+                        $idPesanan = 'ID' . str_pad($pesanan['id_pesanan'], 6, '0', STR_PAD_LEFT);
+                ?>
+                <div class="transaction-card" data-status="<?= str_replace(' ', '-', $status) ?>">
                     <div class="transaction-header">
                         <div class="transaction-meta">
-                            <span class="transaction-date">05 April 2025, 10:30:15</span>
+                            <span class="transaction-date"><?= $formattedDate ?></span>
                             <span>|</span>
-                            <span class="transaction-id">ID045ABXDSRT99</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID045ABXDSRT99')">
+                            <span class="transaction-id"><?= $idPesanan ?></span>
+                            <button class="copy-btn" onclick="copyTransactionId('<?= $idPesanan ?>')">
                                 <i class="ri-file-copy-line"></i>
                             </button>
                         </div>
-                        <span class="status-badge waiting">Menunggu Pembayaran</span>
+                        <span class="status-badge <?= $statusClass ?>"><?= ucwords($status) ?></span>
                     </div>
                     
                     <div class="divider"></div>
                     
+                    <?php
+                    while ($detail = mysqli_fetch_assoc($queryDetail)) {
+                        $gambarBuku = !empty($detail['gambar']) ? 'image/' . $detail['gambar'] : 'image/default-book.jpg';
+                    ?>
                     <div class="transaction-product">
-                        <img src="image/harry_potter.jpg" alt="Harry Potter" class="product-image">
+                        <img src="<?= $gambarBuku ?>" alt="<?= $detail['judul'] ?>" class="product-image">
                         <div class="product-info">
-                            <h3 class="product-name">Harry Potter and the Philosopher's Stone</h3>
-                            <p class="product-quantity">2 Barang</p>
+                            <h3 class="product-name"><?= $detail['judul'] ?></h3>
+                            <p class="product-quantity"><?= $detail['jumlah'] ?> Barang</p>
                         </div>
                         <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp210.500</p>
+                            <p class="price-label">Harga Satuan</p>
+                            <p class="total-price">Rp<?= number_format($detail['harga'], 0, ',', '.') ?></p>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Transaction 2 - Diproses -->
-                <div class="transaction-card" data-status="processing">
-                    <div class="transaction-header">
-                        <div class="transaction-meta">
-                            <span class="transaction-date">04 April 2025, 14:22:10</span>
-                            <span>|</span>
-                            <span class="transaction-id">ID044CDXDSRT88</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID044CDXDSRT88')">
-                                <i class="ri-file-copy-line"></i>
-                            </button>
-                        </div>
-                        <span class="status-badge processing">Pesanan Diproses</span>
-                    </div>
+                    <?php } ?>
                     
                     <div class="divider"></div>
-                    
-                    <div class="transaction-product">
-                        <img src="image/atomic_habits.jpg" alt="Atomic Habits" class="product-image">
-                        <div class="product-info">
-                            <h3 class="product-name">Atomic Habits</h3>
-                            <p class="product-quantity">1 Barang</p>
-                        </div>
-                        <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp150.000</p>
-                        </div>
-                    </div>
                 </div>
-                
-                <!-- Transaction 3 - Dikirim -->
-                <div class="transaction-card" data-status="shipped">
-                    <div class="transaction-header">
-                        <div class="transaction-meta">
-                            <span class="transaction-date">03 April 2025, 09:15:45</span>
-                            <span>|</span>
-                            <span class="transaction-id">ID043EFXDSRT77</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID043EFXDSRT77')">
-                                <i class="ri-file-copy-line"></i>
-                            </button>
-                        </div>
-                        <span class="status-badge shipped">Pesanan Dikirim</span>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="transaction-product">
-                        <img src="image/deep_work.jpg" alt="Deep Work" class="product-image">
-                        <div class="product-info">
-                            <h3 class="product-name">Deep Work</h3>
-                            <p class="product-quantity">1 Barang</p>
-                        </div>
-                        <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp175.000</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Transaction 4 - Diterima -->
-                <div class="transaction-card" data-status="completed">
-                    <div class="transaction-header">
-                        <div class="transaction-meta">
-                            <span class="transaction-date">02 April 2025, 16:40:30</span>
-                            <span>|</span>
-                            <span class="transaction-id">ID042GHXDSRT66</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID042GHXDSRT66')">
-                                <i class="ri-file-copy-line"></i>
-                            </button>
-                        </div>
-                        <span class="status-badge completed">Pesanan Diterima</span>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="transaction-product">
-                        <img src="image/sapiens.jpg" alt="Sapiens" class="product-image">
-                        <div class="product-info">
-                            <h3 class="product-name">Sapiens: A Brief History of Humankind</h3>
-                            <p class="product-quantity">1 Barang</p>
-                        </div>
-                        <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp225.000</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Transaction 5 - Dibatalkan -->
-                <div class="transaction-card" data-status="cancelled">
-                    <div class="transaction-header">
-                        <div class="transaction-meta">
-                            <span class="transaction-date">01 April 2025, 17:18:24</span>
-                            <span>|</span>
-                            <span class="transaction-id">ID032ZKXDSRT85</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID032ZKXDSRT85')">
-                                <i class="ri-file-copy-line"></i>
-                            </button>
-                        </div>
-                        <span class="status-badge cancelled">Pesanan Dibatalkan</span>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="transaction-product">
-                        <img src="image/laut_bercerita.jpg" alt="Laut Bercerita" class="product-image">
-                        <div class="product-info">
-                            <h3 class="product-name">Laut Bercerita</h3>
-                            <p class="product-quantity">1 Barang</p>
-                        </div>
-                        <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp105.250</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Transaction 6 - Dikembalikan -->
-                <div class="transaction-card" data-status="returned">
-                    <div class="transaction-header">
-                        <div class="transaction-meta">
-                            <span class="transaction-date">31 Maret 2025, 11:05:12</span>
-                            <span>|</span>
-                            <span class="transaction-id">ID031IJXDSRT74</span>
-                            <button class="copy-btn" onclick="copyTransactionId('ID031IJXDSRT74')">
-                                <i class="ri-file-copy-line"></i>
-                            </button>
-                        </div>
-                        <span class="status-badge returned">Pesanan Dikembalikan</span>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="transaction-product">
-                        <img src="image/thinking_fast_and_slow.jpg" alt="Thinking Fast and Slow" class="product-image">
-                        <div class="product-info">
-                            <h3 class="product-name">Thinking, Fast and Slow</h3>
-                            <p class="product-quantity">1 Barang</p>
-                        </div>
-                        <div class="transaction-price">
-                            <p class="price-label">Total Pembayaran</p>
-                            <p class="total-price">Rp195.000</p>
-                        </div>
-                    </div>
-                </div>
+                <?php
+                    }
+                } else {
+                    echo '<p style="text-align: center; padding: 20px; font-size: 1.4rem; color: #666;">Belum ada transaksi</p>';
+                }
+                ?>
             </div>
         </div>
     </div>
     
     <!-- Footer -->
     <div class="footer-brand">
-        <img src="image/Navy_Colorful_fun_Kids_Book_Store_Logo.png" alt="Bukabuku Logo">
+        <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Bukabuku Logo">
         <p>Toko buku online terbesar, terlengkap dan terpercaya di Indonesia</p>
     </div>  
     
@@ -1165,7 +1115,6 @@
                     if (!noResultsMessage) {
                         const message = document.createElement('p');
                         message.id = 'no-results-message';
-                        message.textContent = 'Tidak ada transaksi yang sesuai dengan kriteria pencarian';
                         message.style.textAlign = 'center';
                         message.style.padding = '20px';
                         message.style.fontSize = '1.4rem';

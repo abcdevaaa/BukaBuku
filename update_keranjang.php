@@ -2,8 +2,6 @@
 session_start();
 include "koneksi.php";
 
-
-
 $id_users = $_SESSION['id_users'];
 $id_buku = $_POST['id_buku'];
 $jumlah = $_POST['jumlah'];

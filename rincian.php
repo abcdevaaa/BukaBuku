@@ -1,3 +1,72 @@
+<?php
+session_start();
+include 'koneksi.php';
+
+if (!isset($_SESSION['username'])) {
+    header("Location: LoginRegister.php");
+    exit();
+}
+
+$username = $_SESSION['username'];
+$query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username'");
+$user = mysqli_fetch_assoc($query);
+
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
+
+// Ambil ID pesanan dari parameter URL
+if (!isset($_GET['id_pesanan'])) {
+    die("ID Pesanan tidak ditemukan");
+}
+$id_pesanan = (int)$_GET['id_pesanan'];
+
+// Query untuk mendapatkan data pesanan
+$query_pesanan = "SELECT p.*, a.nama_penerima, a.no_telepon, a.alamat_lengkap, a.kabupaten, a.provinsi, a.kode_pos,
+                  mp.nama_metode as metode_pembayaran_nama, mk.nama_metode as metode_pengiriman_nama, mk.biaya as biaya_pengiriman
+                  FROM pesanan p
+                  JOIN alamat a ON p.id_alamat = a.id_alamat
+                  JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran
+                  JOIN metode_pengiriman mk ON p.metode_pengiriman = mk.id_metodePengiriman
+                  WHERE p.id_pesanan = $id_pesanan AND p.id_users = {$_SESSION['id_users']}";
+$result_pesanan = mysqli_query($koneksi, $query_pesanan);
+$pesanan = mysqli_fetch_assoc($result_pesanan);
+
+if (!$pesanan) {
+    die("Pesanan tidak ditemukan");
+}
+
+// Query untuk mendapatkan detail pesanan
+$query_detail = "SELECT dp.*, b.judul, b.gambar, b.harga
+                 FROM detailpesanan dp
+                 JOIN buku b ON dp.id_buku = b.id_buku
+                 WHERE dp.id_pesanan = $id_pesanan";
+$result_detail = mysqli_query($koneksi, $query_detail);
+$detail_pesanan = mysqli_fetch_all($result_detail, MYSQLI_ASSOC);
+
+// Hitung total harga produk
+$total_harga_produk = 0;
+foreach ($detail_pesanan as $item) {
+    $total_harga_produk += $item['harga'] * $item['jumlah'];
+}
+
+// Tentukan class status
+$statusClass = '';
+switch(strtolower($pesanan['status'])) {
+    case 'menunggu pembayaran':
+        $statusClass = 'status-menunggu';
+        break;
+    case 'pesanan diproses':
+        $statusClass = 'status-diproses';
+        break;
+    case 'pesanan dikirim':
+        $statusClass = 'status-dikirim';
+        break;
+    case 'pesanan diterima':
+        $statusClass = 'status-diterima';
+        break;
+    default:
+        $statusClass = 'status-diproses';
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,7 +157,6 @@
             cursor: pointer;
         }
 
-
         /* Dropdown Kategori */
         .category-dropdown {
             position: relative;
@@ -132,17 +200,7 @@
         }
 
         .category-menu {
-            width: 250px; /* Lebar dropdown */
-        }
-
-        /* Untuk submenu */
-        .category-menu .submenu {
-            display: none;
-            padding-left: 15px;
-        }
-        .category-menu a.has-submenu::after {
-            content: "›";
-            float: right;
+            width: 250px;
         }
 
         .navbar-middle {
@@ -181,7 +239,6 @@
             color: var(--purple);
         }
 
-
         /* Profile Dropdown */
         .profile-dropdown {
             position: relative;
@@ -195,7 +252,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-                cursor: pointer;
+            cursor: pointer;
             margin-right: 30px;
         }
 
@@ -264,168 +321,226 @@
         }
 
         /* Main Layout */
-        .main-container {
-            margin: 30px auto;
-            padding: 0 20px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .left-column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .right-column {
-            width: 450px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--white);
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
+        
+        .header-section {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
         .section-title {
-            font-size: 1.8rem;
+            font-size: 18px;
             font-weight: bold;
             margin-bottom: 15px;
-            color: var(--text-dark);
-            border-bottom: 1px solid var(--gray-medium);
-            padding-bottom: 10px;
+            color: #333;
         }
-
-        /* Info Grid */
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .info-group {
+        
+        .address {
             margin-bottom: 15px;
         }
-
-        .info-label {
-            font-size: 1.2rem;
-            color: #555;
+        
+        .address-name {
+            /* font-weight: bold; */
+            font-size: 13px; /* nama */
             margin-bottom: 5px;
+            color: #666;
         }
-
-        .info-value {
-            font-size: 1.4rem;
+        
+        .address-details {
+            color: #666;
+            line-height: 1.5;
+            font-size: 12px; /* alamat  */
         }
-
+        
+        /* Status Styles */
         .status {
             display: inline-block;
-            background-color: #FFF2E7;
-            font-weight: 600;
-            padding: 4px 12px;
+            /* color: white; */
+            padding: 5px 10px;
+            margin-bottom: 10px;
             border-radius: 12px;
-            font-size: 13px;
-            margin-bottom: 8px;
-            color: #C99E1B;
+            font-size: 1.4rem; /* status */
+            font-weight: 500;
+        }
+        
+        .status-menunggu {
+            background-color: #FFF3CD;
+            color: #856404;
+        }
+        
+        .status-diproses {
+            background-color: #D1ECF1;
+            color: #0C5460;
+        }
+        
+        .status-dikirim {
+            background-color: #CCE5FF;
+            color: #004085;
+        }
+        
+        .status-diterima {
+            background-color: #D4EDDA;
+            color: #155724;
+        }
+        
+        /* Progress Bar Styles */
+        .status-progress {
+            margin-bottom: 20px;
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+        
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .step.active .step-icon {
+            background:c
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            max-width: 100px;
+        }
+        
+        .step.active .step-label {
+            color: var(--purple);
             font-weight: bold;
         }
 
-        /* Product Item */
-        .product-item {
+        /* Produk */
+        .product {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .product:last-child {
+            border-bottom: none;
+        }
+        
+        .product-info {
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
             padding: 10px;
-            border-radius: 15px;
-            border: 1px solid #CCCACA;
         }
-
         .product-image {
             width: 80px;
             height: 100px;
             object-fit: cover;
-            border-radius: 10px;
+            border: 2px solid #eee; /tepi foto/
+        }
+
+        .product-image img {
+            width: 60px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
         }
 
         .product-details {
-            margin-top: 15px;
-            flex: 1;
+            flex-grow: 1;
         }
-
-        .store-name {
-            font-weight: bold;
-            color: #666;
+        
+        .product-title {
+            /* font-weight: bold; */
             margin-bottom: 5px;
-            font-size: 1.5rem;
+            font-size: 1.6rem; /* judul */
         }
-
-        .product-name {
-            font-size: 1.4rem;
-            color: #666;
+        
+        .product-variant {
+            /* color: #666; */
+            font-size: 13px;
             margin-bottom: 5px;
         }
-
+        
         .product-price {
-            font-size: 1.5rem;
             font-weight: bold;
+            font-size: 1.3rem; /* harga */
+            color: var(--purple);
         }
-
-        /* Shipping Address */
-        .shipping-address {
+        
+        .summary-table {
+            width: 100%;
+            /* border-collapse: collapse; */
             margin-top: 15px;
         }
-
-        .shipping-label{
-            font-size: 1.2rem;
-            color: #555;
-            margin-bottom: 5px;
+        
+        .summary-table td {
+            padding: 8px 0;
+            font-size: 1.2rem; /* rincian */
+            border-bottom: 1px solid #eee;
         }
-
-        .shipping-name {
-            font-size: 1.4rem;
-            margin-bottom: 5px;
-        }
-
-        .shipping-details {
-            font-size: 1.4rem;
-            color: var(--text-dark);
-            line-height: 1.5;
-        }
-
-        /* Payment Summary */
-        .payment-summary {
-            margin-top: 15px;
-        }
-
-        .payment-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 1.4rem;
-            color: #555;
-        }
-
-        .payment-label {
-            color: var(--gray-dark);
-        }
-
-        .payment-value {
+        
+        .summary-table .total {
             font-weight: bold;
+            font-size: 16px;
         }
-
-        .total-payment {
-            border-top: 1px solid var(--gray-medium);
-            padding-top: 15px;
+        
+        .payment-method {
             margin-top: 15px;
-            font-size: 1.6rem;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
+            padding: 10px;
+            font-size: 1.3rem; /* Metode */
+        }
+        
+        .payment-note {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff8e1;
+            /* border-radius: 4px; */
+            font-size: 14px;
         }
 
         /* Footer Styles */
@@ -542,22 +657,22 @@
             <i class="ri-question-fill"></i>
             <p>Hubungi Kami</p>
         </div>
-        <div class="container">
+        <div class="container-header">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
                     <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="k_fiksi.html">Buku Fiksi</a>
-                            <a href="k_nonfiksi.html">Buku Nonfiksi</a>
-                            <a href="k_anak.html">Buku Anak</a>
-                            <a href="k_pelajaran.html">Buku Pelajaran</a>
-                            <a href="k_agama.html">Buku Agama</a>
-                            <a href="k_sejarah.html">Buku Sejarah</a>
-                            <a href="k_komik.html">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
@@ -565,22 +680,23 @@
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
                 </div>
+                
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                                <div class="profile-name">Adelia</div>
-                                <div class="profile-email">adeliasa@gmail.com</div>
-                            </div>
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="transaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
@@ -590,89 +706,91 @@
     </header>
 
     <!-- Main Content -->
-    <div class="main-container">
-        <!-- Left Column -->
-        <div class="left-column">
-            <!-- Info Pesanan -->
-            <div class="card">
-                <h2 class="section-title">Info Pesanan</h2>
-                <div class="info-grid">
-                    <div class="info-group">
-                        <div class="info-label">Status Transaksi</div>
-                        <div class="info-value status">Diproses</div>
-                    </div>
-                    <div class="info-group">
-                        <div class="info-label">Tanggal Pemesanan</div>
-                        <div class="info-value">03 April 2025</div>
-                    </div>
-                </div>
-                <div class="info-grid">
-                    <div class="info-group">
-                        <div class="info-label">No. Pesanan</div>
-                        <div class="info-value">ID00000000001</div>
-                    </div>
-                    <div class="info-group">
-                        <div class="info-label">No. Invoice</div>
-                        <div class="info-value">ID00000000001</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rincian Produk -->
-            <div class="card">
-                <h2 class="section-title">Rincian Produk</h2>
-                <div class="product-item">
-                    <img src="image/toko buku abadi.avif" alt="Product Image" class="product-image">
-                    <div class="product-details">
-                        <div class="store-name">Toko Buku Abadi</div>
-                        <div class="product-name">1 barang</div>
-                        <div class="product-price">Rp90.000</div>
-                    </div>
-                </div>
-                <div class="payment-row">
-                    <span class="payment-label">Total Harga</span>
-                    <span class="payment-value">Rp90.000</span>
+    <div class="container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1>Rincian Transaksi</h1>
+        </div>
+        
+        <!-- Alamat Pengiriman -->
+        <div class="section">
+            <h2 class="section-title">Alamat Pengiriman</h2>
+            <div class="address">
+                <div class="address-name"><?= $pesanan['nama_penerima'] ?></div>
+                <div class="address-details">
+                    <?= $pesanan['no_telepon'] ?><br>
+                    <?= $pesanan['alamat_lengkap'] ?>, <?= $pesanan['kabupaten'] ?><br>
+                    <?= $pesanan['provinsi'] ?>, <?= $pesanan['kode_pos'] ?>
                 </div>
             </div>
         </div>
-
-        <!-- Right Column -->
-        <div class="right-column">
-            <!-- Rincian Pengiriman -->
-            <div class="card">
-                <h2 class="section-title">Rincian Pengiriman</h2>
-                <div class="info-group">
-                    <div class="info-label">Metode Pengiriman</div>
-                    <div class="info-value">JNT – Reguler</div>
+        
+        <!-- Status Pengiriman -->
+        <div class="section">
+            <!-- <div class="status-progress">
+                <div class="progress-steps">
+                    <div class="step <?= strtolower($pesanan['status']) == 'menunggu pembayaran' ? 'active' : '' ?>">
+                        <div class="step-icon">1</div>
+                        <div class="step-label">Menunggu Pembayaran</div>
+                    </div>
+                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan diproses' ? 'active' : '' ?>">
+                        <div class="step-icon">2</div>
+                        <div class="step-label">Pesanan Diproses</div>
+                    </div>
+                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan dikirim' ? 'active' : '' ?>">
+                        <div class="step-icon">3</div>
+                        <div class="step-label">Pesanan Dikirim</div>
+                    </div>
+                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan diterima' ? 'active' : '' ?>">
+                        <div class="step-icon">4</div>
+                        <div class="step-label">Pesanan Diterima</div>
+                    </div>
                 </div>
-                <div class="shipping-address">
-                    <div class="shipping-label">Metode Pengiriman</div>
-                    <div class="shipping-name">Kuromi | +6200000000877</div>
-                    <div class="shipping-details">Toko, Purbalingga, Kab. Purbalingga, Jawa Tengah, 53371</div>
+            </div> -->
+            
+            <span class="status <?= $statusClass ?>"><?= ucfirst($pesanan['status']) ?></span>
+            <!-- <p>Pesanan tiba di alamat tujuan. diterima oleh Yang bersangkutan.<br>
+            Penerima: <?= $pesanan['nama_penerima'] ?></p> -->
+        </div>
+        
+        <!-- Produk -->
+        <div class="section">
+            <h2 class="section-title">Produk Dipesan</h2>
+            <?php foreach ($detail_pesanan as $item): ?>
+            <div class="product">
+                <div class="product-info">
+                    <img src="image/<?= $item['gambar'] ?>" alt="<?= $item['judul'] ?>" class="product-image">
+                    <div class="product-details">
+                        <div class="product-title"><?= $item['judul'] ?></div>
+                        <div class="product-variant">Jumlah: <?= $item['jumlah'] ?></div>
+                        <div class="product-price">Rp<?= number_format($item['harga'] * $item['jumlah'], 0, ',', '.') ?></div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Rincian Pembayaran -->
-            <div class="card">
-                <h2 class="section-title">Rincian Pembayaran</h2>
-                <div class="payment-summary">
-                    <div class="payment-row">
-                        <span class="payment-label">Total Harga (1 Barang)</span>
-                        <span class="payment-value">Rp90.000</span>
-                    </div>
-                    <div class="payment-row">
-                        <span class="payment-label">Total Biaya Pengiriman</span>
-                        <span class="payment-value">Rp10.000</span>
-                    </div>
-                    <div class="payment-row">
-                        <span class="payment-label">Metode Pembayaran</span>
-                        <span class="payment-value">QRIS</span>
-                    </div>
-                    <div class="total-payment">
-                        <span>Total Pembayaran</span>
-                        <span>Rp100.000</span>
-                    </div>
-                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <!-- Rincian Pembayaran -->
+        <div class="section">
+            <h2 class="section-title">Rincian Pembayaran</h2>
+            <table class="summary-table">
+                <tr>
+                    <td>Subtotal Produk</td>
+                    <td>Rp<?= number_format($total_harga_produk, 0, ',', '.') ?></td>
+                </tr>
+                <tr>
+                    <td>Subtotal Pengiriman</td>
+                    <td>Rp<?= number_format($pesanan['biaya_pengiriman'], 0, ',', '.') ?></td>
+                </tr>
+                <tr class="total">
+                    <td>Total Pesanan</td>
+                    <td>Rp<?= number_format($pesanan['total_belanja'], 0, ',', '.') ?></td>
+                </tr>
+            </table>
+            
+            <div class="payment-method">
+                <strong>Metode Pembayaran</strong><br>
+                <?= $pesanan['metode_pembayaran_nama'] ?>
             </div>
         </div>
     </div>

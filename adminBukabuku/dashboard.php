@@ -1,4 +1,35 @@
+<?php
+session_start();
+include('../koneksi.php');
 
+// Cek apakah user sudah login dan memiliki role admin
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header("Location: ../LoginRegister.php");
+    exit();
+}
+
+// Query untuk mendapatkan data pesanan terbaru
+$query_pesanan = "SELECT p.*, u.username, mp.nama_metode as metode_pembayaran, mpg.nama_metode as metode_pengiriman 
+                  FROM pesanan p
+                  JOIN users u ON p.id_users = u.id_users
+                  LEFT JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran
+                  LEFT JOIN metode_pengiriman mpg ON p.metode_pengiriman = mpg.id_metodePengiriman
+                  ORDER BY p.tanggal_pesanan DESC LIMIT 5";
+$result_pesanan = mysqli_query($koneksi, $query_pesanan);
+
+// Query untuk statistik
+$query_total_pesanan = "SELECT COUNT(*) as total FROM pesanan";
+$result_total_pesanan = mysqli_query($koneksi, $query_total_pesanan);
+$total_pesanan = mysqli_fetch_assoc($result_total_pesanan)['total'];
+
+$query_total_pelanggan = "SELECT COUNT(*) as total FROM users WHERE role = 'user'";
+$result_total_pelanggan = mysqli_query($koneksi, $query_total_pelanggan);
+$total_pelanggan = mysqli_fetch_assoc($result_total_pelanggan)['total'];
+
+$query_total_penjualan = "SELECT SUM(total_belanja) as total FROM pesanan WHERE status = 'pesanan diterima'";
+$result_total_penjualan = mysqli_query($koneksi, $query_total_penjualan);
+$total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -770,12 +801,12 @@
                     <span class="text">Pesanan</span>
                 </a>
             </li>
-            <!-- <li>
-                <a href="laporan.html">
+            <li>
+                <a href="laporan.php">
                     <i class='bx bxs-doughnut-chart'></i>
                     <span class="text">Laporan</span>
                 </a>
-            </li> -->
+            </li>
             <li>
                 <a href="pelanggan.php">
                     <i class='bx bxs-group'></i>
@@ -784,12 +815,6 @@
             </li>
         </ul>
         <ul class="side-menu">
-            <li>
-                <a href="settings.php">
-                    <i class='bx bxs-cog'></i>
-                    <span class="text">Settings</span>
-                </a>
-            </li>
             <li>
                 <a href="../logout.php" class="logout" id="logout-btn">
                     <i class='bx bxs-log-out-circle'></i>
@@ -801,12 +826,12 @@
     <!-- SIDEBAR -->
 
     <!-- CONTENT -->
-    <section id="content">
-        <!-- NAVBAR -->
+    <!-- <section id="content">
+        NAVBAR
         <nav>
             <div class="nav-left">
                 <i class='bx bx-menu' id="sidebar-toggle"></i>
-                <!-- <a href="#" class="nav-link">Dashboard</a> -->
+                <a href="#" class="nav-link">Dashboard</a>
             </div>
             
             <div class="nav-right">
@@ -817,11 +842,34 @@
                 </a>
             </div>
             
+            Profile Dropdown
+            <div class="profile-dropdown" id="profile-dropdown">
+                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
+                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
+            </div>
+        </nav> -->
+        <!-- NAVBAR -->
+
+        <!-- CONTENT -->
+    <section id="content">
+        <!-- NAVBAR -->
+        <nav>
+            <div class="nav-left">
+                <i class='bx bx-menu' id="sidebar-toggle"></i>
+            </div>
+            
+            <div class="nav-right">
+                <input type="checkbox" id="switch-mode" hidden>
+                <label for="switch-mode" class="switch-mode"></label>
+                <a href="#" class="profile" id="profile-btn">
+                    <img src="../<?php echo $_SESSION['profil'] ?? 'image/default-profile.png'; ?>" alt="Profile Image">
+                </a>
+            </div>
+            
             <!-- Profile Dropdown -->
             <div class="profile-dropdown" id="profile-dropdown">
-                <a href="#"><i class='bx bxs-user'></i> Profil Saya</a>
-                <a href="#"><i class='bx bxs-cog'></i> Pengaturan</a>
-                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
+                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
+                <a href="../logout.php"><i class='bx bxs-log-out-circle'></i> Logout</a>
             </div>
         </nav>
         <!-- NAVBAR -->
@@ -831,49 +879,43 @@
             <div class="head-title">
                 <div class="left">
                     <h1>Dashboard</h1>
-                    <!-- <ul class="breadcrumb">
+                    <ul class="breadcrumb">
                         <li>
-                            <a href="#">Dashboard</a>
+                            <a href="#" class="active">Dashboard</a>
                         </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Home</a>
-                        </li>
-                    </ul> -->
+                    </ul>
                 </div>
-                <a href="#" class="btn-download" id="download-report">
+                <a href="laporan.php" class="btn-download">
                     <i class='bx bxs-cloud-download'></i>
                     <span class="text">Download PDF</span>
                 </a>
             </div>
 
             <ul class="box-info">
-                <li onclick="window.location.href='pesanan.html'">
+                <li onclick="window.location.href='pesanan.php'">
                     <i class='bx bxs-calendar-check'></i>
                     <span class="text">
-                        <h3 id="order-count">1020</h3>
-                        <p>Pesanan Baru</p>
+                        <h3><?php echo number_format($total_pesanan, 0, ',', '.'); ?></h3>
+                        <p>Total Pesanan</p>
                     </span>
                 </li>
                 
                 <li onclick="window.location.href='pelanggan.php'">
                     <i class='bx bxs-group'></i>
                     <span class="text">
-                        <h3 id="visitor-count">123</h3>
-                        <p>Pengunjung</p>
+                        <h3><?php echo number_format($total_pelanggan, 0, ',', '.'); ?></h3>
+                        <p>Total Pelanggan</p>
                     </span>
                 </li>
                 
-                <li onclick="window.location.href='laporan.html'">
+                <li onclick="window.location.href='laporan.php'">
                     <i class='bx bxs-dollar-circle'></i>
                     <span class="text">
-                        <h3 id="sales-count">Rp12.543.000</h3>
+                        <h3>Rp<?php echo number_format($total_penjualan, 0, ',', '.'); ?></h3>
                         <p>Total Penjualan</p>
                     </span>
                 </li>
-                
             </ul>
-
 
             <div class="table-data">
                 <div class="order">
@@ -886,166 +928,60 @@
                             <tr>
                                 <th>Pelanggan</th>
                                 <th>Tanggal Pesanan</th>
+                                <th>Total</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr onclick="showOrderDetail('ORD-2023-001')">
+                            <?php while ($pesanan = mysqli_fetch_assoc($result_pesanan)): ?>
+                            <tr onclick="window.location.href='pesanan_detail.php?id=<?php echo $pesanan['id_pesanan']; ?>'">
                                 <td>
-                                    <img src="https://via.placeholder.com/36x36" alt="Customer Image">
-                                    <p>John Doe</p>
+                                    <!-- <img src="https://via.placeholder.com/36x36" alt="Customer Image"> -->
+                                    <p><?php echo htmlspecialchars($pesanan['username']); ?></p>
                                 </td>
-                                <td>15-06-2023</td>
-                                <td><span class="status completed">Selesai</span></td>
-                            </tr>
-                            <tr onclick="showOrderDetail('ORD-2023-002')">
+                                <td><?php echo date('d-m-Y', strtotime($pesanan['tanggal_pesanan'])); ?></td>
+                                <td>Rp<?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></td>
                                 <td>
-                                    <img src="https://via.placeholder.com/36x36" alt="Customer Image">
-                                    <p>Jane Smith</p>
+                                    <?php 
+                                    $status_class = '';
+                                    switch($pesanan['status']) {
+                                        case 'pesanan diterima':
+                                            $status_class = 'completed';
+                                            break;
+                                        case 'pesanan diproses':
+                                        case 'pesanan dikirim':
+                                            $status_class = 'process';
+                                            break;
+                                        case 'menunggu pembayaran':
+                                            $status_class = 'pending';
+                                            break;
+                                        case 'pesanan dibatalkan':
+                                            $status_class = 'cancelled';
+                                            break;
+                                    }
+                                    ?>
+                                    <span class="status <?php echo $status_class; ?>">
+                                        <?php echo ucfirst(str_replace('pesanan ', '', $pesanan['status'])); ?>
+                                    </span>
                                 </td>
-                                <td>14-06-2023</td>
-                                <td><span class="status pending">Menunggu</span></td>
                             </tr>
-                            <tr onclick="showOrderDetail('ORD-2023-003')">
-                                <td>
-                                    <img src="https://via.placeholder.com/36x36" alt="Customer Image">
-                                    <p>Robert Johnson</p>
-                                </td>
-                                <td>14-06-2023</td>
-                                <td><span class="status process">Diproses</span></td>
-                            </tr>
-                            <tr onclick="showOrderDetail('ORD-2023-004')">
-                                <td>
-                                    <img src="https://via.placeholder.com/36x36" alt="Customer Image">
-                                    <p>Sarah Williams</p>
-                                </td>
-                                <td>13-06-2023</td>
-                                <td><span class="status pending">Menunggu</span></td>
-                            </tr>
-                            <tr onclick="showOrderDetail('ORD-2023-005')">
-                                <td>
-                                    <img src="https://via.placeholder.com/36x36" alt="Customer Image">
-                                    <p>Michael Brown</p>
-                                </td>
-                                <td>12-06-2023</td>
-                                <td><span class="status completed">Selesai</span></td>
-                            </tr>
+                            <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
-                <!-- <div class="todo">
-                    <div class="head">
-                        <h3>Daftar Tugas</h3>
-                        <i class='bx bx-plus' id="add-todo-btn"></i>
-                        <i class='bx bx-filter' onclick="alert('Fitur filter tugas akan tersedia segera!')"></i>
-                    </div>
-                    <ul class="todo-list" id="todo-list">
-                        <li class="completed" onclick="toggleTodoStatus(this)">
-                            <p>Periksa stok buku terlaris</p>
-                            <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                        </li>
-                        <li class="completed" onclick="toggleTodoStatus(this)">
-                            <p>Kirim laporan mingguan</p>
-                            <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                        </li>
-                        <li class="not-completed" onclick="toggleTodoStatus(this)">
-                            <p>Hubungi supplier buku baru</p>
-                            <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                        </li>
-                        <li class="completed" onclick="toggleTodoStatus(this)">
-                            <p>Perbarui harga buku diskon</p>
-                            <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                        </li>
-                        <li class="not-completed" onclick="toggleTodoStatus(this)">
-                            <p>Siapkan paket promo akhir bulan</p>
-                            <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                        </li>
-                    </ul>
-                    
-                    Add Todo Form -->
-                    <!-- <div class="add-todo-form" id="add-todo-form">
-                        <input type="text" placeholder="Masukkan tugas baru..." id="new-todo-input">
-                        <button id="save-todo-btn">Simpan</button>
-                    </div>
-                </div>-->
             </div>
         </main>
         <!-- MAIN -->
     </section>
     <!-- CONTENT -->
 
-    <!-- Order Detail Modal -->
-    <div class="modal" id="order-detail-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Detail Pesanan</h3>
-                <span class="close" onclick="closeModal('order-detail-modal')">&times;</span>
-            </div>
-            <div class="modal-body" id="order-detail-content">
-                <!-- Content will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeModal('order-detail-modal')">Tutup</button>
-                <button class="btn-confirm" onclick="printOrder()">Cetak</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Logout Confirmation Modal -->
-    <!-- <div class="modal" id="logout-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Konfirmasi Logout</h3>
-                <span class="close" onclick="closeModal('logout-modal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Apakah Anda yakin ingin keluar dari sistem?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeModal('logout-modal')">Batal</button>
-                <button class="btn-confirm" onclick="performLogout()">Logout</button>
-            </div>
-        </div>
-    </div> -->
-
-    <!-- Todo Options Modal -->
-    <div class="modal" id="todo-options-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Opsi Tugas</h3>
-                <span class="close" onclick="closeModal('todo-options-modal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Apa yang ingin Anda lakukan dengan tugas ini?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="deleteTodo()">Hapus</button>
-                <button class="btn-confirm" onclick="editTodo()">Edit</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gunakan versi Chart.js yang lebih spesifik -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
-    
     <script>
         // DOM Elements
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const sidebar = document.getElementById('sidebar');
         const switchMode = document.getElementById('switch-mode');
-        const notificationBtn = document.getElementById('notification-btn');
-        const notificationDropdown = document.getElementById('notification-dropdown');
         const profileBtn = document.getElementById('profile-btn');
         const profileDropdown = document.getElementById('profile-dropdown');
-        const markAllRead = document.getElementById('mark-all-read');
-        const logoutBtn = document.getElementById('logout-btn');
-        const logoutDropdownBtn = document.getElementById('logout-dropdown-btn');
-        const downloadReport = document.getElementById('download-report');
-        const addTodoBtn = document.getElementById('add-todo-btn');
-        const addTodoForm = document.getElementById('add-todo-form');
-        const saveTodoBtn = document.getElementById('save-todo-btn');
-        const newTodoInput = document.getElementById('new-todo-input');
-        const todoList = document.getElementById('todo-list');
         
         // Toggle sidebar
         sidebarToggle.addEventListener('click', () => {
@@ -1069,211 +1005,17 @@
             document.body.classList.add('dark');
         }
         
-        // Toggle notification dropdown
-        notificationBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            notificationDropdown.classList.toggle('show');
-            profileDropdown.classList.remove('show');
-        });
-        
         // Toggle profile dropdown
         profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
             profileDropdown.classList.toggle('show');
-            notificationDropdown.classList.remove('show');
         });
-        
-        // Mark all notifications as read
-        markAllRead.addEventListener('click', () => {
-            const notifications = document.querySelectorAll('.notification-item.unread');
-            notifications.forEach(notification => {
-                notification.classList.remove('unread');
-            });
-            document.querySelector('.notification .num').textContent = '0';
-            notificationDropdown.classList.remove('show');
-        });
-        
-        // // Show logout confirmation
-        // logoutBtn.addEventListener('click', (e) => {
-        //     e.preventDefault();
-        //     document.getElementById('logout-modal').classList.add('show');
-        // });
-        
-        // logoutDropdownBtn.addEventListener('click', (e) => {
-        //     e.preventDefault();
-        //     profileDropdown.classList.remove('show');
-        //     document.getElementById('logout-modal').classList.add('show');
-        // });
-        
-        // Close dropdowns when clicking outside
+
+        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if(!notificationBtn.contains(e.target) && !notificationDropdown.contains(e.target)) {
-                notificationDropdown.classList.remove('show');
-            }
             if(!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
                 profileDropdown.classList.remove('show');
             }
-        });
-        
-        // Download report
-        downloadReport.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert('Laporan PDF sedang diproses dan akan segera diunduh...');
-        });
-        
-        // Add todo
-        addTodoBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            addTodoForm.classList.toggle('show');
-        });
-        
-        saveTodoBtn.addEventListener('click', () => {
-            const todoText = newTodoInput.value.trim();
-            if(todoText) {
-                const newTodo = document.createElement('li');
-                newTodo.className = 'not-completed';
-                newTodo.innerHTML = `
-                    <p>${todoText}</p>
-                    <i class='bx bx-dots-vertical-rounded' onclick="event.stopPropagation(); showTodoOptions(event, this.parentElement)"></i>
-                `;
-                newTodo.onclick = function() { toggleTodoStatus(this); };
-                todoList.appendChild(newTodo);
-                newTodoInput.value = '';
-                addTodoForm.classList.remove('show');
-            }
-        });
-        
-        // Modal functions
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-        
-        function showOrderDetail(orderId) {
-            const modalContent = document.getElementById('order-detail-content');
-            modalContent.innerHTML = `
-                <h4>ID Pesanan: ${orderId}</h4>
-                <p><strong>Pelanggan:</strong> John Doe</p>
-                <p><strong>Tanggal:</strong> 15 Juni 2023</p>
-                <p><strong>Status:</strong> Selesai</p>
-                <p><strong>Total:</strong> Rp250.000</p>
-                <h5 style="margin-top: 15px;">Item Pesanan:</h5>
-                <ul style="margin-left: 20px;">
-                    <li>Belajar JavaScript - 1x Rp100.000</li>
-                    <li>Panduan CSS - 1x Rp80.000</li>
-                    <li>HTML untuk Pemula - 1x Rp70.000</li>
-                </ul>
-                <p style="margin-top: 15px;"><strong>Alamat Pengiriman:</strong> Jl. Contoh No. 123, Jakarta</p>
-            `;
-            document.getElementById('order-detail-modal').classList.add('show');
-        }
-        
-        function printOrder() {
-            alert('Fitur cetak pesanan akan membuka jendela pencetakan...');
-            closeModal('order-detail-modal');
-        }
-        
-        function performLogout() {
-            alert('Anda akan keluar dari sistem...');
-            closeModal('logout-modal');
-            window.location.href = 'index.html';
-        }
-        
-        // Todo functions
-        function toggleTodoStatus(todoItem) {
-            if(todoItem.classList.contains('completed')) {
-                todoItem.classList.remove('completed');
-                todoItem.classList.add('not-completed');
-            } else {
-                todoItem.classList.remove('not-completed');
-                todoItem.classList.add('completed');
-            }
-        }
-        
-        let currentTodo = null;
-        
-        function showTodoOptions(event, todoItem) {
-            event.stopPropagation();
-            currentTodo = todoItem;
-            document.getElementById('todo-options-modal').classList.add('show');
-        }
-        
-        function deleteTodo() {
-            if(currentTodo) {
-                currentTodo.remove();
-                currentTodo = null;
-            }
-            closeModal('todo-options-modal');
-        }
-        
-        function editTodo() {
-            if(currentTodo && currentTodo.querySelector('p')) {
-                const todoText = currentTodo.querySelector('p').textContent;
-                const newText = prompt('Edit tugas:', todoText);
-                if(newText !== null && newText.trim() !== '') {
-                    currentTodo.querySelector('p').textContent = newText.trim();
-                }
-            } else {
-                console.error('Elemen todo tidak ditemukan');
-            }
-            closeModal('todo-options-modal');
-        }
-        
-        // Initialize chart
-        document.addEventListener('DOMContentLoaded', function() {
-            const ctx = document.getElementById('chartCanvas').getContext('2d');
-            const salesChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
-                    datasets: [{
-                        label: 'Penjualan (Rp)',
-                        data: [1200000, 1900000, 1500000, 2000000, 1800000, 2500000, 2200000],
-                        backgroundColor: '#8E3482',
-                        borderColor: '#8E3482',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'Rp' + value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return 'Rp' + context.raw.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // Simulate real-time data updates
-            setInterval(() => {
-                // Update counters with random values
-                document.getElementById('order-count').textContent = Math.floor(1020 + Math.random() * 20);
-                document.getElementById('visitor-count').textContent = Math.floor(2834 + Math.random() * 50);
-                
-                // Format sales with thousand separators
-                const sales = 12543000 + Math.floor(Math.random() * 500000);
-                document.getElementById('sales-count').textContent = 'Rp' + sales.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                
-                // Update chart data
-                salesChart.data.datasets[0].data = salesChart.data.datasets[0].data.map(() => 
-                    Math.floor(1000000 + Math.random() * 2000000)
-                );
-                salesChart.update();
-            }, 5000);
         });
     </script>
 </body>

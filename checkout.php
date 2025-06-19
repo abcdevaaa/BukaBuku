@@ -676,7 +676,8 @@ $_SESSION['checkout_data'] = [
                 </form>
             </div>
                 
-
+         </div>
+    </div>
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         // ==================== DOM ELEMENTS ====================

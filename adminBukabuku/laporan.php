@@ -2,8 +2,63 @@
 session_start();
 include('../koneksi.php');
 
-// Query untuk mengambil data pesanan dengan join ke tabel terkait
+// Base query without ORDER BY
 $query = "SELECT 
+            p.id_pesanan, 
+            p.tanggal_pesanan, 
+            p.total_belanja, 
+            p.status, 
+            u.username AS nama_pelanggan,
+            mp.nama_metode AS metode_pembayaran
+          FROM pesanan p
+          JOIN users u ON p.id_users = u.id_users
+          LEFT JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran";
+
+// Get filter values
+$date_range = isset($_GET['date-range']) ? $_GET['date-range'] : 'month';
+$status_filter = isset($_GET['status-filter']) ? $_GET['status-filter'] : 'all';
+
+// Build WHERE conditions array
+$where_conditions = [];
+
+// Add status filter if not 'all'
+if ($status_filter != 'all') {
+    $where_conditions[] = "p.status = '$status_filter'";
+}
+
+// Add date range filter
+$current_date = date('Y-m-d');
+switch ($date_range) {
+    case 'today':
+        $where_conditions[] = "DATE(p.tanggal_pesanan) = '$current_date'";
+        break;
+    case 'week':
+        $where_conditions[] = "p.tanggal_pesanan >= DATE_SUB('$current_date', INTERVAL 1 WEEK)";
+        break;
+    case 'month':
+        $where_conditions[] = "MONTH(p.tanggal_pesanan) = MONTH('$current_date') AND YEAR(p.tanggal_pesanan) = YEAR('$current_date')";
+        break;
+    case 'year':
+        $where_conditions[] = "YEAR(p.tanggal_pesanan) = YEAR('$current_date')";
+        break;
+}
+
+// Combine WHERE conditions if any exist
+if (!empty($where_conditions)) {
+    $query .= " WHERE " . implode(" AND ", $where_conditions);
+}
+
+// Add ORDER BY at the end
+$query .= " ORDER BY p.tanggal_pesanan DESC";
+
+// Execute query with error handling
+$result = mysqli_query($koneksi, $query);
+if (!$result) {
+    die('Query error: ' . mysqli_error($koneksi));
+}
+
+// Query for all orders (for modals)
+$all_orders_query = "SELECT 
             p.id_pesanan, 
             p.tanggal_pesanan, 
             p.total_belanja, 
@@ -26,27 +81,30 @@ $query = "SELECT
           LEFT JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran
           LEFT JOIN metode_pengiriman mpg ON p.metode_pengiriman = mpg.id_metodePengiriman
           ORDER BY p.tanggal_pesanan DESC";
-$result = mysqli_query($koneksi, $query);
 
-// Query untuk filter status
-$status_filter = isset($_GET['status']) ? $_GET['status'] : '';
-if ($status_filter) {
-    $query .= " WHERE p.status = '$status_filter'";
+$all_orders_result = mysqli_query($koneksi, $all_orders_query);
+if (!$all_orders_result) {
+    die('Query error: ' . mysqli_error($koneksi));
 }
 
-// Query untuk filter tanggal
-$date_filter = isset($_GET['date']) ? $_GET['date'] : '';
-if ($date_filter) {
-    $query .= ($status_filter ? " AND" : " WHERE") . " DATE(p.tanggal_pesanan) = '$date_filter'";
+$all_orders = [];
+while ($row = mysqli_fetch_assoc($all_orders_result)) {
+    $all_orders[$row['id_pesanan']] = $row;
 }
 
-// Query untuk filter pelanggan
-$customer_filter = isset($_GET['customer']) ? $_GET['customer'] : '';
-if ($customer_filter) {
-    $query .= ($status_filter || $date_filter ? " AND" : " WHERE") . " u.nama LIKE '%$customer_filter%'";
+// Get order items
+$items_query = "SELECT dp.id_pesanan, dp.*, b.judul, b.harga 
+                FROM detailpesanan dp
+                JOIN buku b ON dp.id_buku = b.id_buku";
+$items_result = mysqli_query($koneksi, $items_query);
+if (!$items_result) {
+    die('Query error: ' . mysqli_error($koneksi));
 }
 
-$result = mysqli_query($koneksi, $query);
+$all_items = [];
+while ($item = mysqli_fetch_assoc($items_result)) {
+    $all_items[$item['id_pesanan']][] = $item;
+}
 ?>
 
 <!DOCTYPE html>
@@ -54,12 +112,10 @@ $result = mysqli_query($koneksi, $query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Manajemen Pesanan</title>
+    <title>Laporan Penjualan - Toko Buku</title>
     <!-- Boxicons -->
     <link href='https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap');
-
         * {
             margin: 0;
             padding: 0;
@@ -89,8 +145,6 @@ $result = mysqli_query($koneksi, $query);
             --light-yellow: #FFF2C6;
             --orange: #FD7238;
             --light-orange: #FFE0D3;
-            --green: #28a745;
-            --light-green: #d4edda;
         }
 
         html {
@@ -452,90 +506,113 @@ $result = mysqli_query($koneksi, $query);
             color: var(--purple);
         }
         
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+        /* Filter Section */
+        .filter-section {
+            background: var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark);
             font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
         }
-        .btn-primary {
-            background: var(--purple);
-            color: white;
-            border: none;
-        }
-        .btn-primary:hover {
-            background: #7c2d72;
-        }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--purple);
-            color: var(--purple);
-        }
-        .btn-outline:hover {
-            background: var(--light-purple);
-        }
-        .btn-danger {
-            background: var(--red);
-            color: white;
-            border: none;
-        }
-        .btn-danger:hover {
-            background: #c4413b;
-        }
-        .btn-success {
-            background: var(--green);
-            color: white;
-            border: none;
-        }
-        .btn-success:hover {
-            background: #218838;
+        .filter-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--grey);
+            border-radius: 6px;
+            font-family: var(--lato);
+            transition: border 0.3s ease;
         }
 
-        /* Orders Table */
-        .orders-table {
+        .filter-control:focus {
+            outline: none;
+            border-color: var(--purple);
+        }
+
+        .btn-primary {
+            margin-top: 24px;
+            width: 100%;
+            padding: 10px 12px;
+            border: 0px solid var(--grey);
+            background: var(--grey);
+            border-radius: 6px;
+            font-family: var(--lato);
+            /* transition: border 0.3s ease; */
+        }
+
+        .btn-primary:hover {
+            /* outline: none; */
+            background: var(--purple);
+            color: #fff;
+        }
+
+        /* Sales Table */
+        .sales-table {
             width: 100%;
             background: var(--light);
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .orders-table table {
+        .sales-table table {
             width: 100%;
             border-collapse: collapse;
         }
-        .orders-table th {
+        .sales-table th {
             background: var(--light-purple);
             color: var(--purple);
             padding: 12px 15px;
             text-align: left;
             font-weight: 600;
         }
-        .orders-table td {
+        .sales-table td {
             padding: 12px 15px;
             border-bottom: 1px solid var(--grey);
             color: var(--dark);
         }
-        .orders-table tr:last-child td {
+        .sales-table tr:last-child td {
             border-bottom: none;
         }
-        .orders-table tr:hover td {
+        .sales-table tr:hover td {
             background: rgba(142, 52, 130, 0.05);
         }
-        .order-actions {
-            display: flex;
-            gap: 8px;
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
         }
-        .order-actions .btn-icon {
+        .status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.canceled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.processing {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .btn-icon {
             width: 32px;
             height: 32px;
             display: flex;
@@ -545,59 +622,48 @@ $result = mysqli_query($koneksi, $query);
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .order-actions .btn-icon.edit {
+        .btn-icon.edit {
             background: rgba(255, 206, 38, 0.2);
             color: var(--yellow);
+            border: 1px solid rgba(255, 255, 255, 0.5); /* Added white border */
         }
-        .order-actions .btn-icon.edit:hover {
+        .btn-icon.edit:hover {
             background: rgba(255, 206, 38, 0.3);
         }
-        .order-actions .btn-icon.delete {
-            background: rgba(219, 80, 74, 0.2);
-            color: var(--red);
-        }
-        .order-actions .btn-icon.delete:hover {
-            background: rgba(219, 80, 74, 0.3);
-        }
-        .order-actions .btn-icon.view {
-            background: rgba(56, 182, 255, 0.2);
-            color: #38b6ff;
-        }
-        .order-actions .btn-icon.view:hover {
-            background: rgba(56, 182, 255, 0.3);
-        }
 
-        /* Status Badges */
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            display: inline-block;
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 5px;
         }
-        .status-pending {
-            background-color: var(--light-yellow);
-            color: #856404;
+        .page-item {
+            list-style: none;
         }
-        .status-processing {
-            background-color: var(--light-orange);
-            color: #721c24;
+        .page-link {
+            display: block;
+            padding: 8px 12px;
+            border: 1px solid var(--grey);
+            border-radius: 4px;
+            color: var(--dark);
+            text-decoration: none;
+            transition: all 0.3s ease;
         }
-        .status-shipped {
-            background-color: #cce5ff;
-            color: #004085;
+        .page-link:hover {
+            background: var(--light-purple);
         }
-        .status-completed {
-            background-color: var(--light-green);
-            color: #155724;
+        .page-item.active .page-link {
+            background: var(--purple);
+            color: white;
+            border-color: var(--purple);
         }
-        .status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
+        .page-item.disabled .page-link {
+            color: var(--dark-grey);
+            pointer-events: none;
         }
 
         /* Modal */
-        /* Tambahan untuk modal */
         .modal {
             display: none;
             position: fixed;
@@ -620,8 +686,6 @@ $result = mysqli_query($koneksi, $query);
             width: 90%;
             max-width: 800px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            max-height: 90vh;
-            overflow-y: auto;
         }
         .modal-header {
             display: flex;
@@ -640,71 +704,20 @@ $result = mysqli_query($koneksi, $query);
         }
         .modal-body {
             margin-bottom: 24px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
-        .form-group {
-            margin-bottom: 16px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--dark);
-            font-weight: 500;
-        }
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--grey);
-            border-radius: 6px;
-            font-family: var(--lato);
-            transition: border 0.3s ease;
-        }
-        .form-control:focus {
-            outline: none;
-            border-color: var(--purple);
-        }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        /* Order Details */
         .order-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
             margin-bottom: 20px;
         }
-        .order-details-section {
-            background: var(--light);
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .order-details-section h4 {
-            margin-bottom: 15px;
-            color: var(--purple);
-            border-bottom: 1px solid var(--grey);
-            padding-bottom: 8px;
-        }
-        .order-detail-item {
-            display: flex;
+        .order-details h4 {
             margin-bottom: 10px;
+            color: var(--dark);
         }
-        .order-detail-label {
-            font-weight: 500;
-            width: 120px;
-            color: var(--dark-grey);
-        }
-        .order-detail-value {
-            flex: 1;
-        }
-        
-        /* Order Items */
         .order-items {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-bottom: 20px;
         }
         .order-items th {
             background: var(--light-purple);
@@ -719,7 +732,29 @@ $result = mysqli_query($koneksi, $query);
         .order-items tr:last-child td {
             border-bottom: none;
         }
-        
+        .order-summary {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--grey);
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .summary-row.total {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--grey);
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
         /* Alert Message */
         .alert {
             padding: 12px 16px;
@@ -743,39 +778,6 @@ $result = mysqli_query($koneksi, $query);
             font-size: 1.2rem;
         }
 
-        /* Filter Section */
-        .filter-section {
-            background: var(--light);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .filter-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: var(--dark);
-        }
-        .filter-group select, 
-        .filter-group input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid var(--grey);
-            border-radius: 6px;
-            font-family: var(--lato);
-        }
-
         /* Responsive */
         @media screen and (max-width: 768px) {
             #sidebar {
@@ -785,22 +787,21 @@ $result = mysqli_query($koneksi, $query);
                 width: calc(100% - 60px);
                 left: 200px;
             }
-            .orders-table {
+            .sales-table {
                 overflow-x: auto;
                 display: block;
             }
-            .order-details {
-                grid-template-columns: 1fr;
+            .filter-row {
+                flex-direction: column;
+                gap: 15px;
             }
+            .filter-group {
+                width: 100%;
+            }
+            
         }
 
         @media screen and (max-width: 576px) {
-            .action-buttons {
-                flex-direction: column;
-            }
-            .btn {
-                justify-content: center;
-            }
             #content nav .profile .name {
                 display: none;
             }
@@ -808,18 +809,11 @@ $result = mysqli_query($koneksi, $query);
                 width: 95%;
                 padding: 16px;
             }
-            .filter-row {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .filter-group {
-                min-width: 100%;
-            }
         }
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
+   <!-- SIDEBAR -->
     <section id="sidebar">
         <a href="#" class="brand">
             <img src="../image/Navy Colorful fun Kids Book Store Logo1.png" alt="Book Store Logo">
@@ -843,13 +837,13 @@ $result = mysqli_query($koneksi, $query);
                     <span class="text">Kategori</span>
                 </a>
             </li>
-            <li class="active">
+            <li>
                 <a href="pesanan.php">
                     <i class='bx bxs-shopping-bag-alt'></i>
                     <span class="text">Pesanan</span>
                 </a>
             </li>
-            <li>
+            <li class="active">
                 <a href="laporan.php">
                     <i class='bx bxs-doughnut-chart'></i>
                     <span class="text">Laporan</span>
@@ -901,14 +895,14 @@ $result = mysqli_query($koneksi, $query);
         <main>
             <div class="head-title">
                 <div class="left">
-                    <h1>Manajemen Pesanan</h1>
+                    <h1>Laporan Penjualan</h1>
                     <ul class="breadcrumb">
                         <li>
-                            <a href="dashboard.html">Dashboard</a>
+                            <a href="dashboard.php">Dashboard</a>
                         </li>
                         <li><i class='bx bx-chevron-right'></i></li>
                         <li>
-                            <a class="active" href="#">Pesanan</a>
+                            <a class="active" href="#">Laporan</a>
                         </li>
                     </ul>
                 </div>
@@ -928,322 +922,242 @@ $result = mysqli_query($koneksi, $query);
                 <form method="GET" action="">
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label for="filter-status">Status</label>
-                            <select id="filter-status" name="status">
-                                <option value="">Semua Status</option>
-                                <option value="menunggu pembayaran" <?php echo $status_filter == 'menunggu pembayaran' ? 'selected' : ''; ?>>Menunggu Pembayaran</option>
-                                <option value="pesanan diproses" <?php echo $status_filter == 'pesanan diproses' ? 'selected' : ''; ?>>Pesanan Diproses</option>
-                                <option value="pesanan dikirim" <?php echo $status_filter == 'pesanan dikirim' ? 'selected' : ''; ?>>Pesanan Dikirim</option>
-                                <option value="pesanan diterima" <?php echo $status_filter == 'pesanan diterima' ? 'selected' : ''; ?>>Pesanan Diterima</option>
-                                <option value="pesanan dibatalkan" <?php echo $status_filter == 'pesanan dibatalkan' ? 'selected' : ''; ?>>Pesanan Dibatalkan</option>
+                            <label for="date-range">Rentang Tanggal</label>
+                            <select id="date-range" name="date-range" class="filter-control">
+                                <option value="month" <?php echo $date_range == 'month' ? 'selected' : ''; ?>>Bulan Ini</option>
+                                <option value="week" <?php echo $date_range == 'week' ? 'selected' : ''; ?>>Minggu Ini</option>
+                                <option value="today" <?php echo $date_range == 'today' ? 'selected' : ''; ?>>Hari Ini</option>
+                                <option value="year" <?php echo $date_range == 'year' ? 'selected' : ''; ?>>Tahun Ini</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="filter-date">Tanggal</label>
-                            <input type="date" id="filter-date" name="date" value="<?php echo $date_filter; ?>">
+                            <label for="status-filter">Status</label>
+                            <select id="status-filter" name="status-filter" class="filter-control">
+                                <option value="all" <?php echo $status_filter == 'all' ? 'selected' : ''; ?>>Semua Status</option>
+                                <option value="pesanan diterima" <?php echo $status_filter == 'pesanan diterima' ? 'selected' : ''; ?>>Selesai</option>
+                                <option value="menunggu pembayaran" <?php echo $status_filter == 'menunggu pembayaran' ? 'selected' : ''; ?>>Pending</option>
+                                <option value="pesanan diproses" <?php echo $status_filter == 'pesanan diproses' ? 'selected' : ''; ?>>Diproses</option>
+                                <option value="pesanan dikirim" <?php echo $status_filter == 'pesanan dikirim' ? 'selected' : ''; ?>>Dikirim</option>
+                                <option value="pesanan dibatalkan" <?php echo $status_filter == 'pesanan dibatalkan' ? 'selected' : ''; ?>>Dibatalkan</option>
+                            </select>
                         </div>
                         <div class="filter-group">
-                            <label for="filter-customer">Pelanggan</label>
-                            <input type="text" id="filter-customer" name="customer" placeholder="Nama pelanggan" value="<?php echo $customer_filter; ?>">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 24px;">
+                                <i class='bx bx-filter-alt'></i> Terapkan Filter
+                            </button>
                         </div>
-                    </div>
-                    <div class="filter-row">
-                        <button type="submit" class="btn btn-primary" name="apply-filter">
-                            <i class='bx bx-filter-alt'></i> Terapkan Filter
-                        </button>
-                        <a href="pesanan.php" class="btn btn-outline">
-                            <i class='bx bx-reset'></i> Reset
-                        </a>
                     </div>
                 </form>
             </div>
 
-            <!-- <div class="action-buttons">
-                <a href="export_pesanan.php" class="btn btn-outline">
-                    <i class='bx bx-export'></i> Export
-                </a>
-                <button class="btn btn-primary" onclick="window.print()">
-                    <i class='bx bx-printer'></i> Cetak
-                </button>
-            </div> -->
-
-            <div class="orders-table">
+            <!-- Sales Table -->
+            <div class="sales-table">
                 <table>
                     <thead>
                         <tr>
+                            <th>No</th>
                             <th>ID Pesanan</th>
-                            <th>Pelanggan</th>
                             <th>Tanggal</th>
+                            <th>Pelanggan</th>
                             <th>Total</th>
                             <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($pesanan = mysqli_fetch_assoc($result)): ?>
-                            <tr data-order-id="<?php echo $pesanan['id_pesanan']; ?>">
-                                <td>ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></td>
-                                <td><?php echo $pesanan['nama_pelanggan']; ?></td>
-                                <td><?php echo date('d M Y', strtotime($pesanan['tanggal_pesanan'])); ?></td>
-                                <td>Rp <?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></td>
-                                <td>
-                                    <?php 
-                                        $status_class = '';
-                                        switch($pesanan['status']) {
-                                            case 'menunggu pembayaran': $status_class = 'pending'; break;
-                                            case 'pesanan diproses': $status_class = 'processing'; break;
-                                            case 'pesanan dikirim': $status_class = 'shipped'; break;
-                                            case 'pesanan diterima': $status_class = 'completed'; break;
-                                            case 'pesanan dibatalkan': $status_class = 'cancelled'; break;
-                                        }
-                                    ?>
-                                    <span class="status-badge status-<?php echo $status_class; ?>">
-                                        <?php 
-                                            switch($pesanan['status']) {
-                                                case 'menunggu pembayaran': echo 'Menunggu pembayaran'; break;
-                                                case 'pesanan diproses': echo 'Pesanan diproses'; break;
-                                                case 'pesanan dikirim': echo 'Pesanan dikirim'; break;
-                                                case 'pesanan diterima': echo 'Pesanan diterima'; break;
-                                                case 'pesanan dibatalkan': echo 'Pesanan dibatalkan'; break;
-                                            }
-                                        ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="order-actions">
-                                        <a href="#order-details-<?php echo $pesanan['id_pesanan']; ?>" class="btn-icon view">
-                                            <i class='bx bx-show'></i>
-                                        </a>
-                                        <?php if ($pesanan['status'] != 'pesanan diterima' && $pesanan['status'] != 'pesanan dibatalkan'): ?>
-                                            <a href="#edit-order-<?php echo $pesanan['id_pesanan']; ?>" class="btn-icon edit">
-                                                <i class='bx bx-edit'></i>
-                                            </a>
-                                            <?php if ($pesanan['status'] != 'pesanan dibatalkan'): ?>
-                                                <a href="#cancel-order-<?php echo $pesanan['id_pesanan']; ?>" class="btn-icon delete">
-                                                    <i class='bx bx-x'></i>
-                                                </a>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
+                        <?php 
+                        $no = 1;
+                        while ($pesanan = mysqli_fetch_assoc($result)): 
+                            $status_class = '';
+                            $status_text = '';
+                            
+                            switch($pesanan['status']) {
+                                case 'pesanan diterima':
+                                    $status_class = 'completed';
+                                    $status_text = 'Selesai';
+                                    break;
+                                case 'pesanan dikirim':
+                                    $status_class = 'processing';
+                                    $status_text = 'Diproses';
+                                    break;
+                                case 'menunggu pembayaran':
+                                    $status_class = 'pending';
+                                    $status_text = 'Pending';
+                                    break;
+                                case 'pesanan dibatalkan':
+                                    $status_class = 'canceled';
+                                    $status_text = 'Dibatalkan';
+                                    break;
+                                case 'pesanan diproses':
+                                    $status_class = 'processing';
+                                    $status_text = 'Diproses';
+                                    break;
+                            }
+                        ?>
+                        <tr>
+                            <td><?php echo $no++; ?></td>
+                            <td>#ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></td>
+                            <td><?php echo date('d M Y', strtotime($pesanan['tanggal_pesanan'])); ?></td>
+                            <td><?php echo $pesanan['nama_pelanggan']; ?></td>
+                            <td>Rp <?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></td>
+                            <td><span class="status <?php echo $status_class; ?>"><?php echo $status_text; ?></span></td>
+                            <td>
+                                <a href="#order-details-<?php echo $pesanan['id_pesanan']; ?>" class="btn-icon edit">
+                                    <i class='bx bx-show'></i>
+                                </a>
+                            </td>
+                        </tr>
                         <?php endwhile; ?>
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <!-- <ul class="pagination">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul> -->
         </main>
         <!-- MAIN -->
     </section>
     <!-- CONTENT -->
 
     <!-- Order Details Modals -->
-    <?php 
-    // Query ulang untuk modal
-    $result = mysqli_query($koneksi, $query);
-    while ($pesanan = mysqli_fetch_assoc($result)): 
-        // Ambil detail pesanan
-        $detail_query = "SELECT dp.*, b.judul, b.harga, b.gambar 
-                         FROM detailpesanan dp
-                         JOIN buku b ON dp.id_buku = b.id_buku
-                         WHERE dp.id_pesanan = " . $pesanan['id_pesanan'];
-        $detail_result = mysqli_query($koneksi, $detail_query);
-        $detail_items = mysqli_fetch_all($detail_result, MYSQLI_ASSOC);
-    ?>
-        <div class="modal" id="order-details-<?php echo $pesanan['id_pesanan']; ?>">
+    <?php foreach ($all_orders as $id_pesanan => $pesanan): ?>
+        <?php 
+        $items = isset($all_items[$id_pesanan]) ? $all_items[$id_pesanan] : [];
+        $subtotal = $pesanan['total_belanja'] - $pesanan['biaya_pengiriman'];
+        ?>
+        <div class="modal" id="order-details-<?php echo $id_pesanan; ?>">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Detail Pesanan ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></h3>
+                    <h3>Detail Pesanan ORD-<?php echo str_pad($id_pesanan, 4, '0', STR_PAD_LEFT); ?></h3>
                     <a href="#" class="close">&times;</a>
                 </div>
                 <div class="modal-body">
                     <div class="order-details">
-                        <div class="order-details-section">
-                            <h4>Informasi Pesanan</h4>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">ID Pesanan</div>
-                                <div class="order-detail-value">ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Tanggal</div>
-                                <div class="order-detail-value"><?php echo date('d M Y H:i', strtotime($pesanan['tanggal_pesanan'])); ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Status</div>
-                                <div class="order-detail-value">
-                                    <span class="status-badge status-<?php echo $status_class; ?>">
-                                        <?php 
-                                            switch($pesanan['status']) {
-                                                case 'menunggu pembayaran': echo 'Menunggu pembayaran'; break;
-                                                case 'pesanan diproses': echo 'Pesanan diproses'; break;
-                                                case 'pesanan dikirim': echo 'Pesanan dikirim'; break;
-                                                case 'pesanan diterima': echo 'Pesanan diterima'; break;
-                                                case 'pesanan dibatalkan': echo 'Pesanan dibatalkan'; break;
-                                            }
-                                        ?>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Total</div>
-                                <div class="order-detail-value">Rp <?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Metode Pembayaran</div>
-                                <div class="order-detail-value"><?php echo $pesanan['metode_pembayaran'] ? $pesanan['metode_pembayaran'] : '-'; ?></div>
-                            </div>
-                            <?php if ($pesanan['bukti']): ?>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Bukti Pembayaran</div>
-                                <div class="order-detail-value">
-                                    <a href="../bukti_pembayaran/<?php echo $pesanan['bukti']; ?>" target="_blank">
-                                        Lihat Bukti
-                                    </a>
-                                </div>
-                            </div>
-                            <?php endif; ?>
+                        <h4>Informasi Pesanan</h4>
+                        <div class="summary-row">
+                            <span>Tanggal Pesanan:</span>
+                            <span><?php echo date('d M Y H:i', strtotime($pesanan['tanggal_pesanan'])); ?></span>
                         </div>
-                        
-                        <div class="order-details-section">
-                            <h4>Informasi Pelanggan</h4>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Nama</div>
-                                <div class="order-detail-value"><?php echo $pesanan['nama_pelanggan']; ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Email</div>
-                                <div class="order-detail-value"><?php echo $pesanan['email']; ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Telepon</div>
-                                <div class="order-detail-value"><?php echo $pesanan['no_telepon']; ?></div>
-                            </div>
+                        <div class="summary-row">
+                            <span>Status:</span>
+                            <span class="status <?php echo $status_class; ?>"><?php echo $status_text; ?></span>
                         </div>
-                        
-                        <div class="order-details-section">
-                            <h4>Alamat Pengiriman</h4>
-                            <div class="order-detail-item">
-                                <div class="order-detail-value">
-                                    <?php echo $pesanan['alamat_lengkap']; ?><br>
-                                    <?php echo $pesanan['kabupaten']; ?>, <?php echo $pesanan['provinsi']; ?><br>
-                                    <?php echo $pesanan['kode_pos']; ?><br>
-                                    Indonesia
-                                </div>
-                            </div>
+                        <div class="summary-row">
+                            <span>Metode Pembayaran:</span>
+                            <span><?php echo $pesanan['metode_pembayaran'] ? $pesanan['metode_pembayaran'] : '-'; ?></span>
                         </div>
-                        
-                        <div class="order-details-section">
-                            <h4>Informasi Pengiriman</h4>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Kurir</div>
-                                <div class="order-detail-value"><?php echo $pesanan['metode_pengiriman'] ? $pesanan['metode_pengiriman'] : '-'; ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Biaya</div>
-                                <div class="order-detail-value">Rp <?php echo number_format($pesanan['biaya_pengiriman'], 0, ',', '.'); ?></div>
-                            </div>
-                            <div class="order-detail-item">
-                                <div class="order-detail-label">Estimasi</div>
-                                <div class="order-detail-value"><?php echo $pesanan['estimasi'] ? $pesanan['estimasi'] : '-'; ?></div>
-                            </div>
+                        <?php if ($pesanan['bukti']): ?>
+                        <div class="summary-row">
+                            <span>Bukti Pembayaran:</span>
+                            <span>
+                                <a href="../bukti_pembayaran/<?php echo $pesanan['bukti']; ?>" target="_blank">
+                                    Lihat Bukti
+                                </a>
+                            </span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="order-details">
+                        <h4>Informasi Pelanggan</h4>
+                        <div class="summary-row">
+                            <span>Nama:</span>
+                            <span><?php echo $pesanan['nama_pelanggan']; ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Email:</span>
+                            <span><?php echo $pesanan['email']; ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Telepon:</span>
+                            <span><?php echo $pesanan['no_telepon']; ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Alamat:</span>
+                            <span>
+                                <?php echo $pesanan['alamat_lengkap']; ?>, 
+                                <?php echo $pesanan['kabupaten']; ?>, 
+                                <?php echo $pesanan['provinsi']; ?> 
+                                <?php echo $pesanan['kode_pos']; ?>
+                            </span>
                         </div>
                     </div>
-                    
-                    <h4>Daftar Produk</h4>
-                    <table class="order-items">
-                        <thead>
-                            <tr>
-                                <th>Produk</th>
-                                <th>Harga</th>
-                                <th>Qty</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($detail_items as $item): ?>
+
+                    <div class="order-details">
+                        <h4>Informasi Pengiriman</h4>
+                        <div class="summary-row">
+                            <span>Kurir:</span>
+                            <span><?php echo $pesanan['metode_pengiriman'] ? $pesanan['metode_pengiriman'] : '-'; ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Biaya:</span>
+                            <span>Rp <?php echo number_format($pesanan['biaya_pengiriman'], 0, ',', '.'); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Estimasi:</span>
+                            <span><?php echo $pesanan['estimasi'] ? $pesanan['estimasi'] : '-'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="order-details">
+                        <h4>Item Pesanan</h4>
+                        <table class="order-items">
+                            <thead>
+                                <tr>
+                                    <th>Produk</th>
+                                    <th>Harga</th>
+                                    <th>Qty</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($items as $item): ?>
                                 <tr>
                                     <td><?php echo $item['judul']; ?></td>
                                     <td>Rp <?php echo number_format($item['harga'], 0, ',', '.'); ?></td>
                                     <td><?php echo $item['jumlah']; ?></td>
                                     <td>Rp <?php echo number_format($item['harga'] * $item['jumlah'], 0, ',', '.'); ?></td>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" style="text-align: right; font-weight: 500;">Subtotal</td>
-                                <td>Rp <?php echo number_format($pesanan['total_belanja'] - $pesanan['biaya_pengiriman'], 0, ',', '.'); ?></td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" style="text-align: right; font-weight: 500;">Ongkos Kirim</td>
-                                <td>Rp <?php echo number_format($pesanan['biaya_pengiriman'], 0, ',', '.'); ?></td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" style="text-align: right; font-weight: 500;">Total</td>
-                                <td>Rp <?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="order-summary">
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span>Rp <?php echo number_format($subtotal, 0, ',', '.'); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Ongkos Kirim:</span>
+                            <span>Rp <?php echo number_format($pesanan['biaya_pengiriman'], 0, ',', '.'); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Diskon:</span>
+                            <span>Rp 0</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span>Rp <?php echo number_format($pesanan['total_belanja'], 0, ',', '.'); ?></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <a href="#" class="btn btn-outline">Tutup</a>
-                  
                 </div>
             </div>
         </div>
-
-        <!-- Edit Order Modal -->
-        <div class="modal" id="edit-order-<?php echo $pesanan['id_pesanan']; ?>">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Pesanan ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></h3>
-                    <a href="#" class="close">&times;</a>
-                </div>
-                <form action="update_pesanan.php" method="POST">
-                    <input type="hidden" name="id_pesanan" value="<?php echo $pesanan['id_pesanan']; ?>">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="edit-order-status">Status Pesanan</label>
-                            <select id="edit-order-status" name="status" class="form-control" required>
-                                <option value="menunggu pembayaran" <?php echo $pesanan['status'] == 'menunggu pembayaran' ? 'selected' : ''; ?>>Menunggu Pembayaran</option>
-                                <option value="pesanan diproses" <?php echo $pesanan['status'] == 'pesanan diproses' ? 'selected' : ''; ?>>Pesanan Diproses</option>
-                                <option value="pesanan dikirim" <?php echo $pesanan['status'] == 'pesanan dikirim' ? 'selected' : ''; ?>>Pesanan Dikirim</option>
-                                <option value="pesanan diterima" <?php echo $pesanan['status'] == 'pesanan diterima' ? 'selected' : ''; ?>>Pesanan Diterima</option>
-                            </select>
-                        </div>
-                        
-                    </div>
-                    <div class="modal-footer">
-                        <a href="#" class="btn btn-outline">Batal</a>
-                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Cancel Order Modal -->
-        <div class="modal" id="cancel-order-<?php echo $pesanan['id_pesanan']; ?>">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Batalkan Pesanan ORD-<?php echo str_pad($pesanan['id_pesanan'], 4, '0', STR_PAD_LEFT); ?></h3>
-                    <a href="#" class="close">&times;</a>
-                </div>
-                <form action="cancel_pesanan.php" method="POST">
-                    <input type="hidden" name="id_pesanan" value="<?php echo $pesanan['id_pesanan']; ?>">
-                    <div class="modal-body">
-                        <p>Apakah Anda yakin ingin membatalkan pesanan ini?</p>
-                        <div class="form-group">
-                            <label for="cancel-reason">Alasan Pembatalan</label>
-                            <textarea id="cancel-reason" name="alasan" class="form-control" rows="3" placeholder="Masukkan alasan pembatalan" required></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <a href="#" class="btn btn-outline">Batal</a>
-                        <button type="submit" class="btn btn-danger">Konfirmasi Pembatalan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    <?php endwhile; ?>
+    <?php endforeach; ?>
 
     <script>
         // Fungsi untuk menangani modal

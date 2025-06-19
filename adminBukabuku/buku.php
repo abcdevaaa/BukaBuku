@@ -940,6 +940,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </a>
             </li>
             <li>
+                <a href="laporan.php">
+                    <i class='bx bxs-doughnut-chart'></i>
+                    <span class="text">Laporan</span>
+                </a>
+            </li>
+            <li>
                 <a href="pelanggan.php">
                     <i class='bx bxs-group'></i>
                     <span class="text">Pelanggan</span>
@@ -947,12 +953,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </li>
         </ul>
         <ul class="side-menu">
-            <li>
-                <a href="settings.html">
-                    <i class='bx bxs-cog'></i>
-                    <span class="text">Settings</span>
-                </a>
-            </li>
             <li>
                 <a href="../logout.php" class="logout">
                     <i class='bx bxs-log-out-circle'></i>
@@ -968,22 +968,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <!-- NAVBAR -->
         <nav>
             <div class="nav-left">
-                <i class='bx bx-menu'></i>
+                <i class='bx bx-menu' id="sidebar-toggle"></i>
             </div>
             
             <div class="nav-right">
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
-                <a href="#" class="notification">
-                    <i class='bx bxs-bell'></i>
-                    <span class="num">8</span>
-                </a>
-                <a href="#" class="profile">
+                <a href="#" class="profile" id="profile-btn">
                     <img src="image/profile-picture.jpg" alt="Profile Image">
                 </a>
             </div>
+            
+            
+            <!-- Profile Dropdown -->
+            <div class="profile-dropdown" id="profile-dropdown">
+                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
+                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
+            </div>
         </nav>
-        <!-- NAVBAR -->
 
         <!-- MAIN -->
         <main>
@@ -1086,7 +1088,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </table>
             </div>
 
-            <div class="pagination">
+            <!-- <div class="pagination">
                 <a href="#" class="page-item disabled">
                     <i class='bx bx-chevron-left'></i>
                 </a>
@@ -1096,7 +1098,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <a href="#" class="page-item">
                     <i class='bx bx-chevron-right'></i>
                 </a>
-            </div>
+            </div> -->
         </main>
         <!-- MAIN -->
     </section>
@@ -1278,4 +1280,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </div>
 </body>
+<script>
+    const profileBtn = document.getElementById('profile-btn');
+    const profileDropdown = document.getElementById('profile-dropdown');
+
+    // Toggle profile dropdown
+        profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            profileDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if(!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+            }
+        });
+</script>
 </html>

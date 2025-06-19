@@ -1,16 +1,18 @@
 <?php
 session_start();
 include 'koneksi.php';
- 
+
+// if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'user') {
+//     header("Location: LoginRegister.php");
+//     exit();
+// }
+
 $email = isset($_SESSION['email']);
 $username = isset($_SESSION['username']);
 
-$sql = "SELECT * FROM buku";
-$query = mysqli_query($koneksi, $sql);
+$query = mysqli_query($koneksi, "SELECT * FROM buku ORDER BY RAND() limit 7");
 $queryKategori = mysqli_query($koneksi, "SELECT * FROM kategori");
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
-
-
 ?>
 
 
@@ -598,10 +600,6 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
                         </div>
                     </form>
                 
-                <!-- <div class="navbar-middle">
-                    <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
-                    <i class="ri-search-line"></i>
-                </div> -->
                 <?php if (!isset($_SESSION['id_users'])): ?>
                     <!-- Jika belum login -->
                 <div class="navbar-right1">
@@ -711,7 +709,7 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
                 <div class="footer-column">
                     <h3>Lainnya</h3>
                     <ul>
-                        <li><a href="#">Tentang Kami</a></li>
+                        <li><a href="tentangkami.php">Tentang Kami</a></li>
                         <li><a href="#">Hubungi Kami</a></li>
                     </ul>
                 </div>

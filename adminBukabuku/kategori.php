@@ -2,8 +2,145 @@
 session_start();
 include('../koneksi.php');
 
+// Fungsi untuk menampilkan pesan alert
+function showAlert($message, $type) {
+    echo '<div class="alert alert-'.$type.'">
+            <i class="bx '.($type == 'success' ? 'bx-check-circle' : 'bx-error').'"></i>
+            <span>'.$message.'</span>
+          </div>';
+}
 
+// Proses tambah kategori
+if (isset($_POST['add_category'])) {
+    $nama = $_POST['nama'];
+    $deskripsi = $_POST['deskripsi'];
+    
+    // Upload foto
+    $foto = '';
+    if ($_FILES['foto']['name']) {
+        $target_dir = "../image/";
+        $target_file = $target_dir . basename($_FILES["foto"]["name"]);
+        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+        
+        // Check if image file is a actual image
+        $check = getimagesize($_FILES["foto"]["tmp_name"]);
+        if ($check !== false) {
+            // Generate unique filename
+            $foto = uniqid() . '.' . $imageFileType;
+            $target_file = $target_dir . $foto;
+            
+            if (move_uploaded_file($_FILES["foto"]["tmp_name"], $target_file)) {
+                // File uploaded successfully
+            } else {
+                showAlert("Maaf, terjadi error saat upload file.", "danger");
+            }
+        } else {
+            showAlert("File yang diupload bukan gambar.", "danger");
+        }
+    }
+    
+    $sql = "INSERT INTO kategori (nama_kategori, deskripsi, foto) 
+            VALUES ('$nama', '$deskripsi', '$foto')";
+    
+    if (mysqli_query($koneksi, $sql)) {
+        showAlert("Kategori berhasil ditambahkan", "success");
+    } else {
+        showAlert("Error: " . mysqli_error($koneksi), "danger");
+    }
+}
 
+// Proses edit kategori
+if (isset($_POST['edit_category'])) {
+    $id = $_POST['id'];
+    $nama = $_POST['nama'];
+    $deskripsi = $_POST['deskripsi'];
+    
+    // Jika ada file foto baru diupload
+    if ($_FILES['foto']['name']) {
+        $target_dir = "../image/";
+        $target_file = $target_dir . basename($_FILES["foto"]["name"]);
+        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+        
+        $check = getimagesize($_FILES["foto"]["tmp_name"]);
+        if ($check !== false) {
+            // Generate unique filename
+            $foto = uniqid() . '.' . $imageFileType;
+            $target_file = $target_dir . $foto;
+            
+            if (move_uploaded_file($_FILES["foto"]["tmp_name"], $target_file)) {
+                // Hapus foto lama jika ada
+                $sql_old = "SELECT foto FROM kategori WHERE id_kategori = $id";
+                $result = mysqli_query($conn, $sql_old);
+                $row = mysqli_fetch_assoc($result);
+                if ($row['foto'] && file_exists($target_dir . $row['foto'])) {
+                    unlink($target_dir . $row['foto']);
+                }
+            } else {
+                showAlert("Maaf, terjadi error saat upload file.", "danger");
+            }
+        } else {
+            showAlert("File yang diupload bukan gambar.", "danger");
+        }
+    } else {
+        // Jika tidak ada file baru, tetap gunakan foto lama
+        $foto = $_POST['foto_lama'];
+    }
+    
+    $sql = "UPDATE kategori SET  
+            nama_kategori = '$nama', 
+            deskripsi = '$deskripsi', 
+            foto = '$foto' 
+            WHERE id_kategori = $id";
+    
+    if (mysqli_query($koneksi, $sql)) {
+        showAlert("Kategori berhasil diperbarui", "success");
+    } else {
+        showAlert("Error: " . mysqli_error($koneksi), "danger");
+    }
+}
+
+// Proses hapus kategori
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    
+    // Hapus foto jika ada
+    $sql_foto = "SELECT foto FROM kategori WHERE id_kategori = $id";
+    $result = mysqli_query($koneksi, $sql_foto);
+    $row = mysqli_fetch_assoc($result);
+    if ($row['foto']) {
+        $target_dir = "../image/";
+        if (file_exists($target_dir . $row['foto'])) {
+            unlink($target_dir . $row['foto']);
+        }
+    }
+    
+    $sql = "DELETE FROM kategori WHERE id_kategori = $id";
+    if (mysqli_query($koneksi, $sql)) {
+        showAlert("Kategori berhasil dihapus", "success");
+    } else {
+        showAlert("Error: " . mysqli_error($koneksi), "danger");
+    }
+}
+
+// Ambil data kategori dari database
+$sql = "SELECT k.*, COUNT(b.id_buku) as jumlah_buku 
+        FROM kategori k 
+        LEFT JOIN buku b ON k.id_kategori = b.id_kategori 
+        GROUP BY k.id_kategori";
+$result = mysqli_query($koneksi, $sql);
+$kategories = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+// Cek apakah modal tambah/edit harus ditampilkan
+$show_modal = isset($_GET['add']) || isset($_GET['edit']);
+$modal_type = isset($_GET['add']) ? 'add' : (isset($_GET['edit']) ? 'edit' : '');
+$edit_data = [];
+
+if ($modal_type == 'edit' && isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $sql = "SELECT * FROM kategori WHERE id_kategori = $id";
+    $result = mysqli_query($koneksi, $sql);
+    $edit_data = mysqli_fetch_assoc($result);
+}
 ?>
 
 <!DOCTYPE html>
@@ -663,6 +800,12 @@ include('../koneksi.php');
                 </a>
             </li>
             <li>
+                <a href="laporan.php">
+                    <i class='bx bxs-doughnut-chart'></i>
+                    <span class="text">Laporan</span>
+                </a>
+            </li>
+            <li>
                 <a href="pelanggan.php">
                     <i class='bx bxs-group'></i>
                     <span class="text">Pelanggan</span>
@@ -670,12 +813,6 @@ include('../koneksi.php');
             </li>
         </ul>
         <ul class="side-menu">
-            <li>
-                <a href="settings.html">
-                    <i class='bx bxs-cog'></i>
-                    <span class="text">Settings</span>
-                </a>
-            </li>
             <li>
                 <a href="#" class="logout" id="logout-btn">
                     <i class='bx bxs-log-out-circle'></i>
@@ -697,43 +834,16 @@ include('../koneksi.php');
             <div class="nav-right">
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
-                <a href="#" class="notification" id="notification-btn">
-                    <i class='bx bxs-bell'></i>
-                    <span class="num">8</span>
-                </a>
                 <a href="#" class="profile" id="profile-btn">
                     <img src="image/profile-picture.jpg" alt="Profile Image">
                 </a>
             </div>
             
-            <!-- Notification Dropdown -->
-            <div class="notification-dropdown" id="notification-dropdown">
-                <div class="notification-item unread">
-                    <p>Pesanan baru dari John Doe</p>
-                    <p class="notification-time">2 menit yang lalu</p>
-                </div>
-                <div class="notification-item unread">
-                    <p>Pembayaran diterima untuk pesanan #1234</p>
-                    <p class="notification-time">1 jam yang lalu</p>
-                </div>
-                <div class="notification-item">
-                    <p>Pesanan #1235 telah dikirim</p>
-                    <p class="notification-time">3 jam yang lalu</p>
-                </div>
-                <div class="notification-item">
-                    <p>Stok buku "Belajar JavaScript" hampir habis</p>
-                    <p class="notification-time">5 jam yang lalu</p>
-                </div>
-                <div class="mark-all-read" id="mark-all-read">
-                    Tandai semua telah dibaca
-                </div>
-            </div>
             
             <!-- Profile Dropdown -->
             <div class="profile-dropdown" id="profile-dropdown">
-                <a href="#"><i class='bx bxs-user'></i> Profil Saya</a>
-                <a href="#"><i class='bx bxs-cog'></i> Pengaturan</a>
-                <a href="#" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
+                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
+                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
             </div>
         </nav>
         <!-- NAVBAR -->
@@ -756,15 +866,17 @@ include('../koneksi.php');
             </div>
 
             <!-- Alert Message -->
-            <div class="alert alert-success" id="success-alert" style="display: none;">
-                <i class='bx bx-check-circle'></i>
-                <span id="alert-message"></span>
-            </div>
+            <?php 
+            if (isset($_SESSION['alert'])) {
+                showAlert($_SESSION['alert']['message'], $_SESSION['alert']['type']);
+                unset($_SESSION['alert']);
+            }
+            ?>
 
             <div class="action-buttons">
-                <button class="btn btn-primary" id="add-category-btn">
+                <a href="?add=1" class="btn btn-primary">
                     <i class='bx bx-plus'></i> Tambah Kategori
-                </button>
+                </a>
                 <button class="btn btn-outline" id="export-categories-btn">
                     <i class='bx bx-export'></i> Export
                 </button>
@@ -774,100 +886,39 @@ include('../koneksi.php');
                 <table>
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Kode Kategori</th>
+                            <th>ID Kategori</th>
+                            <th>Foto</th>
                             <th>Nama Kategori</th>
                             <th>Jumlah Buku</th>
-                            <th>Tanggal Dibuat</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <?php foreach ($kategories as $kategori): ?>
                         <tr>
-                            <td>1</td>
-                            <td>FIK-001</td>
-                            <td>Fiksi</td>
-                            <td>128</td>
-                            <td>12 Jan 2023</td>
+                            <td><?= $kategori['id_kategori'] ?></td>
+                            <td>
+                                <?php if ($kategori['foto']): ?>
+                                <img src="../image/<?= $kategori['foto'] ?>" alt="<?= $kategori['nama_kategori'] ?>" style="width: 50px; height: 50px; object-fit: cover;">
+                                <?php else: ?>
+                                <span>-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= $kategori['nama_kategori'] ?></td>
+                            <td><?= $kategori['jumlah_buku'] ?></td>
                             <td>
                                 <div class="category-actions">
-                                    <div class="btn-icon edit" onclick="editCategory(1, 'FIK-001', 'Fiksi', 'Buku-buku fiksi')">
+                                    <a href="?edit=1&id=<?= $kategori['id_kategori'] ?>" class="btn-icon edit">
                                         <i class='bx bx-edit'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(1, 'Fiksi')">
+                                    </a>
+                                    <a href="?delete=<?= $kategori['id_kategori'] ?>" class="btn-icon delete" onclick="return confirm('Apakah Anda yakin ingin menghapus kategori ini?')">
                                         <i class='bx bx-trash'></i>
-                                    </div>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>NFK-002</td>
-                            <td>Non-Fiksi</td>
-                            <td>95</td>
-                            <td>15 Jan 2023</td>
-                            <td>
-                                <div class="category-actions">
-                                    <div class="btn-icon edit" onclick="editCategory(2, 'NFK-002', 'Non-Fiksi', 'Buku-buku non fiksi')">
-                                        <i class='bx bx-edit'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(2, 'Non-Fiksi')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>ANK-003</td>
-                            <td>Anak-anak</td>
-                            <td>76</td>
-                            <td>20 Feb 2023</td>
-                            <td>
-                                <div class="category-actions">
-                                    <div class="btn-icon edit" onclick="editCategory(3, 'ANK-003', 'Anak-anak', 'Buku untuk anak-anak')">
-                                        <i class='bx bx-edit'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(3, 'Anak-anak')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>PDK-004</td>
-                            <td>Pendidikan</td>
-                            <td>112</td>
-                            <td>5 Mar 2023</td>
-                            <td>
-                                <div class="category-actions">
-                                    <div class="btn-icon edit" onclick="editCategory(4, 'PDK-004', 'Pendidikan', 'Buku pendidikan')">
-                                        <i class='bx bx-edit'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(4, 'Pendidikan')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>KMK-005</td>
-                            <td>Komik</td>
-                            <td>64</td>
-                            <td>10 Apr 2023</td>
-                            <td>
-                                <div class="category-actions">
-                                    <div class="btn-icon edit" onclick="editCategory(5, 'KMK-005', 'Komik', 'Buku komik dan manga')">
-                                        <i class='bx bx-edit'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(5, 'Komik')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
+                        <?php endforeach; ?>
+                              
                     </tbody>
                 </table>
             </div>
@@ -876,50 +927,49 @@ include('../koneksi.php');
     </section>
     <!-- CONTENT -->
 
-    <!-- Add/Edit Category Modal -->
-    <div class="modal" id="category-modal">
+    <!-- Modal untuk Tambah/Edit Kategori -->
+    <?php if ($show_modal): ?>
+    <div class="modal show" id="category-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modal-title">Tambah Kategori Baru</h3>
-                <span class="close" onclick="closeModal('category-modal')">&times;</span>
+                <h3><?= ($modal_type == 'add' ? 'Tambah Kategori Baru' : 'Edit Kategori') ?></h3>
+                <a href="kategori.php" class="close">&times;</a>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="category-code">Kode Kategori</label>
-                    <input type="text" id="category-code" class="form-control" placeholder="Masukkan kode kategori">
+            <form method="POST" action="kategori.php" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <?php if ($modal_type == 'edit'): ?>
+                    <input type="hidden" name="id" value="<?= $edit_data['id_kategori'] ?>">
+                    <input type="hidden" name="foto_lama" value="<?= $edit_data['foto'] ?>">
+                    <?php endif; ?>
+                    
+                    <div class="form-group">
+                        <label for="nama">Nama Kategori</label>
+                        <input type="text" id="nama" name="nama" class="form-control" 
+                               value="<?= $modal_type == 'edit' ? $edit_data['nama_kategori'] : '' ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deskripsi">Deskripsi (Opsional)</label>
+                        <textarea id="deskripsi" name="deskripsi" class="form-control" rows="3"><?= $modal_type == 'edit' ? $edit_data['deskripsi'] : '' ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="foto">Foto Kategori</label>
+                        <input type="file" id="foto" name="foto" class="form-control">
+                        <?php if ($modal_type == 'edit' && $edit_data['foto']): ?>
+                        <div style="margin-top: 10px;">
+                            <img src="../image/<?= $edit_data['foto'] ?>" alt="Foto Kategori" style="max-width: 100px; max-height: 100px;">
+                            <p>Foto saat ini</p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="category-name">Nama Kategori</label>
-                    <input type="text" id="category-name" class="form-control" placeholder="Masukkan nama kategori">
+                <div class="modal-footer">
+                    <a href="kategori.php" class="btn btn-outline">Batal</a>
+                    <button type="submit" name="<?= $modal_type == 'add' ? 'add_category' : 'edit_category' ?>" class="btn btn-primary">Simpan</button>
                 </div>
-                <div class="form-group">
-                    <label for="category-description">Deskripsi (Opsional)</label>
-                    <textarea id="category-description" class="form-control" rows="3" placeholder="Masukkan deskripsi kategori"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal('category-modal')">Batal</button>
-                <button class="btn btn-primary" id="save-category-btn">Simpan</button>
-            </div>
+            </form>
         </div>
     </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div class="modal" id="delete-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Konfirmasi Hapus</h3>
-                <span class="close" onclick="closeModal('delete-modal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p id="delete-message">Apakah Anda yakin ingin menghapus kategori ini? Semua buku dalam kategori ini akan dipindahkan ke kategori "Belum Terkategori".</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal('delete-modal')">Batal</button>
-                <button class="btn btn-danger" id="confirm-delete-btn">Hapus</button>
-            </div>
-        </div>
-    </div>
+    <?php endif; ?>
 
     <script>
         // DOM Elements
@@ -973,18 +1023,17 @@ include('../koneksi.php');
             document.body.classList.add('dark');
         }
 
-        // Toggle notification dropdown
-        notificationBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            notificationDropdown.classList.toggle('show');
-            profileDropdown.classList.remove('show');
-        });
-
         // Toggle profile dropdown
         profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
             profileDropdown.classList.toggle('show');
-            notificationDropdown.classList.remove('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if(!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+            }
         });
 
         // Mark all notifications as read

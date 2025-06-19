@@ -1,3 +1,77 @@
+<?php
+session_start();
+include 'koneksi.php';
+
+if (!isset($_SESSION['id_users'])) {
+    header("Location: LoginRegister.php");
+    exit();
+}
+
+$id_users = $_SESSION['id_users'];
+$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'add':
+                // Tambah alamat
+                $nama_penerima = mysqli_real_escape_string($koneksi, $_POST['recipientName']);
+                $no_telepon = mysqli_real_escape_string($koneksi, $_POST['phoneNumber']);
+                $alamat_lengkap = mysqli_real_escape_string($koneksi, $_POST['fullAddress']);
+                $kabupaten = mysqli_real_escape_string($koneksi, $_POST['city']);
+                $provinsi = mysqli_real_escape_string($koneksi, $_POST['province']);
+                $kode_pos = mysqli_real_escape_string($koneksi, $_POST['postalCode']);
+                
+                $query = "INSERT INTO alamat (id_users, nama_penerima, no_telepon, alamat_lengkap, kabupaten, provinsi, kode_pos) 
+                          VALUES ('$id_users', '$nama_penerima', '$no_telepon', '$alamat_lengkap', '$kabupaten', '$provinsi', '$kode_pos')";
+                mysqli_query($koneksi, $query);
+                break;
+                
+            case 'edit':
+                // Edit alamat
+                $id_alamat = mysqli_real_escape_string($koneksi, $_POST['addressId']);
+                $nama_penerima = mysqli_real_escape_string($koneksi, $_POST['recipientName']);
+                $no_telepon = mysqli_real_escape_string($koneksi, $_POST['phoneNumber']);
+                $alamat_lengkap = mysqli_real_escape_string($koneksi, $_POST['fullAddress']);
+                $kabupaten = mysqli_real_escape_string($koneksi, $_POST['city']);
+                $provinsi = mysqli_real_escape_string($koneksi, $_POST['province']);
+                $kode_pos = mysqli_real_escape_string($koneksi, $_POST['postalCode']);
+                
+                $query = "UPDATE alamat SET 
+                          nama_penerima = '$nama_penerima',
+                          no_telepon = '$no_telepon',
+                          alamat_lengkap = '$alamat_lengkap',
+                          kabupaten = '$kabupaten',
+                          provinsi = '$provinsi',
+                          kode_pos = '$kode_pos'
+                          WHERE id_alamat = '$id_alamat' AND id_users = '$id_users'";
+                mysqli_query($koneksi, $query);
+                break;
+                
+            case 'delete':
+                // Delete alamat
+                $id_alamat = mysqli_real_escape_string($koneksi, $_POST['addressId']);
+                $query = "DELETE FROM alamat WHERE id_alamat = '$id_alamat' AND id_users = '$id_users'";
+                mysqli_query($koneksi, $query);
+                break;
+        }
+        
+        header("Location: alamat.php");
+        exit();
+    }
+}
+
+// mengambil alamat dari database
+$queryAlamat = mysqli_query($koneksi, "SELECT * FROM alamat WHERE id_users = '$id_users' ORDER BY id_alamat DESC");
+$addresses = [];
+while ($alamat = mysqli_fetch_assoc($queryAlamat)) {
+    $addresses[] = $alamat;
+}
+?>
+
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
@@ -763,20 +837,20 @@
         </div>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
-                    <img src="image/Navy Colorful fun Kids Book Store Logo1.png" alt="Logo Bukabuku" class="logo">
+                    <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
                 <div class="navbar-left">
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="k_fiksi.html">Buku Fiksi</a>
-                            <a href="k_nonfiksi.html">Buku Nonfiksi</a>
-                            <a href="k_anak.html">Buku Anak</a>
-                            <a href="k_pelajaran.html">Buku Pelajaran</a>
-                            <a href="k_agama.html">Buku Agama</a>
-                            <a href="k_sejarah.html">Buku Sejarah</a>
-                            <a href="k_komik.html">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
@@ -784,22 +858,23 @@
                     <input type="text" placeholder="Cari Produk, Judul Buku, Penulis">
                     <i class="ri-search-line"></i>
                 </div>
+                
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                                <div class="profile-name">Adelia</div>
-                                <div class="profile-email">adeliasa@gmail.com</div>
-                            </div>
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="transaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>
@@ -814,10 +889,10 @@
                 <div class="sidebar-section">
                     <h3 class="sidebar-title">Akun Saya</h3>
                     <ul class="sidebar-menu">
-                        <li><a href="#">Akun</a></li>
-                        <li><a href="#">Wishlist</a></li>
-                        <li><a href="#">Transaksi</a></li>
-                        <li><a href="#" class="active">Alamat</a></li>
+                        <li><a href="akunU.php">Pengaturan Profil</a></li>
+                        <li><a href="wishlist.php">Wishlist</a></li>
+                        <li><a href="transaksiU.php">Transaksi</a></li>
+                        <li><a href="alamat.php" class="active">Alamat</a></li>
                     </ul>
                 </div>
             </div>
@@ -829,6 +904,29 @@
                 </div>
                 
                 <div class="address-list" id="addressList">
+                    <?php if (empty($addresses)): ?>
+                        <div class="no-address">
+                            <p>Anda belum memiliki alamat yang tersimpan.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($addresses as $address): ?>
+                            <div class="address-card">
+                                <div class="address-name">
+                                    Alamat Rumah
+                                </div>
+                                <div class="address-detail">
+                                    <?= htmlspecialchars($address['nama_penerima']) ?><br>
+                                    <?= nl2br(htmlspecialchars($address['alamat_lengkap'])) ?><br>
+                                    <?= htmlspecialchars($address['kabupaten']) ?>, <?= htmlspecialchars($address['provinsi']) ?> <?= htmlspecialchars($address['kode_pos']) ?><br>
+                                    No. HP: <?= htmlspecialchars($address['no_telepon']) ?>
+                                </div>
+                                <div class="address-actions">
+                                    <button class="edit-btn" data-id="<?= $address['id_alamat'] ?>">Ubah</button>
+                                    <button class="delete-btn" data-id="<?= $address['id_alamat'] ?>">Hapus</button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -839,54 +937,32 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2 id="modalTitle">Tambah Alamat Baru</h2>
-            <form id="addressForm">
-                <input type="hidden" id="addressId">
-                <div class="form-group">
-                    <label for="addressName">Nama Alamat</label>
-                    <input type="text" id="addressName" required>
-                </div>
+            <form id="addressForm" method="POST">
+                <input type="hidden" id="addressId" name="addressId">
+                <input type="hidden" name="action" id="formAction" value="add">
                 <div class="form-group">
                     <label for="recipientName">Nama Penerima</label>
-                    <input type="text" id="recipientName" required>
+                    <input type="text" id="recipientName" name="recipientName" required>
                 </div>
                 <div class="form-group">
                     <label for="phoneNumber">Nomor Telepon</label>
-                    <input type="tel" id="phoneNumber" required>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" required>
                 </div>
                 <div class="form-group">
                     <label for="province">Provinsi</label>
-                    <select id="province" required>
-                        <option value="">Pilih Provinsi</option>
-                        <option value="Jawa Barat">Jawa Barat</option>
-                        <option value="Jawa Tengah">Jawa Tengah</option>
-                        <option value="Jawa Timur">Jawa Timur</option>
-                    </select>
+                    <input type="text" id="province" name="province" required>
                 </div>
                 <div class="form-group">
                     <label for="city">Kota/Kabupaten</label>
-                    <select id="city" required>
-                        <option value="">Pilih Kota/Kabupaten</option>
-                        <option value="Bandung">Bandung</option>
-                        <option value="Jakarta">Jakarta</option>
-                        <option value="Surabaya">Surabaya</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="district">Kecamatan</label>
-                    <input type="text" id="district" required>
+                    <input type="text" id="city" name="city" required>
                 </div>
                 <div class="form-group">
                     <label for="postalCode">Kode Pos</label>
-                    <input type="text" id="postalCode" required>
+                    <input type="text" id="postalCode" name="postalCode" required>
                 </div>
                 <div class="form-group">
                     <label for="fullAddress">Alamat Lengkap</label>
-                    <textarea id="fullAddress" rows="3" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="isDefault"> Jadikan alamat utama
-                    </label>
+                    <textarea id="fullAddress" name="fullAddress" rows="3" required></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" id="cancelBtn">Batal</button>
@@ -902,10 +978,14 @@
             <span class="close">&times;</span>
             <h2>Konfirmasi</h2>
             <p id="confirmMessage">Apakah Anda yakin ingin menghapus alamat ini?</p>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" id="cancelConfirmBtn">Batal</button>
-                <button type="button" class="btn btn-primary" id="confirmBtn">Ya, Hapus</button>
-            </div>
+            <form id="deleteForm" method="POST">
+                <input type="hidden" id="deleteAddressId" name="addressId">
+                <input type="hidden" name="action" value="delete">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelConfirmBtn">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="confirmBtn">Ya, Hapus</button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -955,72 +1035,62 @@
         </div>
     </footer>
 
-    <script>
-        // Sample data for addresses
-        let addresses = [
-            {
-                id: 1,
-                name: "Alamat Rumah",
-                recipient: "Adelia Putri",
-                phone: "081234567890",
-                province: "Jawa Barat",
-                city: "Bandung",
-                district: "Coblong",
-                postalCode: "40132",
-                address: "Jl. Melati No. 123, RT 05/RW 02\nKel. Sukajadi, Kec. Coblong\nKota Bandung",
-                isDefault: true
-            },
-            {
-                id: 2,
-                name: "Alamat Kantor",
-                recipient: "Adelia Putri",
-                phone: "081234567890",
-                province: "Jawa Barat",
-                city: "Bandung",
-                district: "Bandung Wetan",
-                postalCode: "40115",
-                address: "Gedung Buku Indah Lt. 5\nJl. Merdeka No. 45\nKota Bandung",
-                isDefault: false
-            }
-        ];
-
+   <script>
         // DOM Elements
         const addressList = document.getElementById('addressList');
         const addAddressBtn = document.getElementById('addAddressBtn');
         const addressModal = document.getElementById('addressModal');
         const confirmModal = document.getElementById('confirmModal');
         const addressForm = document.getElementById('addressForm');
+        const deleteForm = document.getElementById('deleteForm');
         const modalTitle = document.getElementById('modalTitle');
         const closeButtons = document.getElementsByClassName('close');
         const cancelBtn = document.getElementById('cancelBtn');
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
         const confirmBtn = document.getElementById('confirmBtn');
         const confirmMessage = document.getElementById('confirmMessage');
+        const formAction = document.getElementById('formAction');
+        const addressIdInput = document.getElementById('addressId');
+        const deleteAddressIdInput = document.getElementById('deleteAddressId');
 
         // Variables for tracking state
         let currentAction = 'add';
-        let addressToDelete = null;
 
-        // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            renderAddresses();
-            
-            // Event listeners for modal buttons
+            // Event delegation for edit and delete buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('edit-btn')) {
+                    const id = e.target.getAttribute('data-id');
+                    console.log('Edit button clicked, ID:', id);
+                    openAddressModal('edit', id);
+                }
+                
+                if (e.target.classList.contains('delete-btn')) {
+                    const id = e.target.getAttribute('data-id');
+                    console.log('Delete button clicked, ID:', id);
+                    confirmDeleteAddress(id);
+                }
+            });
+
+            // Modal handling
+            const addAddressBtn = document.getElementById('addAddressBtn');
+            const addressModal = document.getElementById('addressModal');
+            const confirmModal = document.getElementById('confirmModal');
+            const closeButtons = document.querySelectorAll('.close');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+
             addAddressBtn.addEventListener('click', () => openAddressModal('add'));
             
-            Array.from(closeButtons).forEach(button => {
+            closeButtons.forEach(button => {
                 button.addEventListener('click', closeAllModals);
             });
             
             cancelBtn.addEventListener('click', closeAllModals);
             cancelConfirmBtn.addEventListener('click', closeAllModals);
             
-            confirmBtn.addEventListener('click', confirmDelete);
-            
-            addressForm.addEventListener('submit', handleAddressSubmit);
-            
             // Close modal when clicking outside
-            window.addEventListener('click', (event) => {
+            window.addEventListener('click', function(event) {
                 if (event.target === addressModal) {
                     closeAllModals();
                 }
@@ -1030,202 +1100,64 @@
             });
         });
 
-        // Render addresses to the page
-        function renderAddresses() {
-            addressList.innerHTML = '';
-            
-            if (addresses.length === 0) {
-                addressList.innerHTML = `
-                    <div class="no-address">
-                        <p>Anda belum memiliki alamat yang tersimpan.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            addresses.forEach(address => {
-                const addressCard = document.createElement('div');
-                addressCard.className = 'address-card';
-                addressCard.innerHTML = `
-                    <div class="address-name">
-                        ${address.name}
-                        ${address.isDefault ? '<span class="default-badge">Utama</span>' : ''}
-                    </div>
-                    <div class="address-detail">
-                        ${address.recipient}<br>
-                        ${address.address}<br>
-                        ${address.city}, ${address.province} ${address.postalCode}<br>
-                        No. HP: ${address.phone}
-                    </div>
-                    <div class="address-actions">
-                        <button class="edit-btn" data-id="${address.id}">Ubah</button>
-                        <button class="delete-btn" data-id="${address.id}">Hapus</button>
-                        ${!address.isDefault ? `<button class="set-default-btn" data-id="${address.id}">Jadikan Utama</button>` : ''}
-                    </div>
-                `;
-                addressList.appendChild(addressCard);
-            });
-            
-            // Add event listeners to action buttons
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const id = parseInt(e.target.getAttribute('data-id'));
-                    openAddressModal('edit', id);
-                });
-            });
-            
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const id = parseInt(e.target.getAttribute('data-id'));
-                    confirmDeleteAddress(id);
-                });
-            });
-            
-            document.querySelectorAll('.set-default-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const id = parseInt(e.target.getAttribute('data-id'));
-                    setDefaultAddress(id);
-                });
-            });
-        }
-
-        // Open address modal for adding or editing
         function openAddressModal(action, id = null) {
+            console.log('Opening modal with action:', action, 'and ID:', id);
+            const addressModal = document.getElementById('addressModal');
+            const formAction = document.getElementById('formAction');
+            const addressIdInput = document.getElementById('addressId');
+            const modalTitle = document.getElementById('modalTitle');
+            
             currentAction = action;
+            formAction.value = action;
             
             if (action === 'add') {
                 modalTitle.textContent = 'Tambah Alamat Baru';
-                addressForm.reset();
-                document.getElementById('addressId').value = '';
-                document.getElementById('isDefault').checked = addresses.length === 0;
+                document.getElementById('addressForm').reset();
+                addressIdInput.value = '';
             } else if (action === 'edit' && id) {
                 modalTitle.textContent = 'Ubah Alamat';
-                const address = addresses.find(addr => addr.id === id);
-                if (address) {
-                    document.getElementById('addressId').value = address.id;
-                    document.getElementById('addressName').value = address.name;
-                    document.getElementById('recipientName').value = address.recipient;
-                    document.getElementById('phoneNumber').value = address.phone;
-                    document.getElementById('province').value = address.province;
-                    document.getElementById('city').value = address.city;
-                    document.getElementById('district').value = address.district;
-                    document.getElementById('postalCode').value = address.postalCode;
-                    document.getElementById('fullAddress').value = address.address;
-                    document.getElementById('isDefault').checked = address.isDefault;
+                addressIdInput.value = id;
+                
+                // Find the address card and populate the form
+                const addressCard = document.querySelector(`.edit-btn[data-id="${id}"]`).closest('.address-card');
+                if (addressCard) {
+                    const addressDetail = addressCard.querySelector('.address-detail').textContent;
+                    const lines = addressDetail.split('\n').map(line => line.trim());
+                    
+                    document.getElementById('recipientName').value = lines[0];
+                    document.getElementById('phoneNumber').value = lines[3].replace('No. HP: ', '');
+                    
+                    const addressParts = lines[2].split(', ');
+                    document.getElementById('city').value = addressParts[0];
+                    
+                    const provincePostal = addressParts[1].split(' ');
+                    document.getElementById('province').value = provincePostal.slice(0, -1).join(' ');
+                    document.getElementById('postalCode').value = provincePostal[provincePostal.length - 1];
+                    
+                    document.getElementById('fullAddress').value = lines[1];
                 }
             }
             
             addressModal.style.display = 'block';
         }
 
-        // Handle form submission
-        function handleAddressSubmit(e) {
-            e.preventDefault();
-            
-            const addressData = {
-                id: currentAction === 'add' ? Date.now() : parseInt(document.getElementById('addressId').value),
-                name: document.getElementById('addressName').value,
-                recipient: document.getElementById('recipientName').value,
-                phone: document.getElementById('phoneNumber').value,
-                province: document.getElementById('province').value,
-                city: document.getElementById('city').value,
-                district: document.getElementById('district').value,
-                postalCode: document.getElementById('postalCode').value,
-                address: document.getElementById('fullAddress').value,
-                isDefault: document.getElementById('isDefault').checked
-            };
-            
-            if (addressData.isDefault) {
-                addresses.forEach(addr => addr.isDefault = false);
-            }
-            
-            if (currentAction === 'add') {
-                addresses.push(addressData);
-            } else {
-                const index = addresses.findIndex(addr => addr.id === addressData.id);
-                if (index !== -1) {
-                    addresses[index] = addressData;
-                }
-            }
-            
-            renderAddresses();
-            closeAllModals();
-        }
-
-        // Confirm address deletion
         function confirmDeleteAddress(id) {
-            addressToDelete = id;
-            confirmMessage.textContent = 'Apakah Anda yakin ingin menghapus alamat ini?';
-            confirmModal.style.display = 'block';
+            console.log('Confirming deletion of address ID:', id);
+            const deleteAddressIdInput = document.getElementById('deleteAddressId');
+            deleteAddressIdInput.value = id;
+            document.getElementById('confirmModal').style.display = 'block';
         }
 
-        // Handle delete confirmation
-        function confirmDelete() {
-            if (addressToDelete) {
-                addresses = addresses.filter(addr => addr.id !== addressToDelete);
-                
-                // If we deleted the default address and there are other addresses, set the first one as default
-                if (addresses.length > 0 && !addresses.some(addr => addr.isDefault)) {
-                    addresses[0].isDefault = true;
-                }
-                
-                renderAddresses();
-                addressToDelete = null;
-                closeAllModals();
-            }
-        }
-
-        // Set default address
-        function setDefaultAddress(id) {
-            addresses.forEach(addr => {
-                addr.isDefault = addr.id === id;
-            });
-            renderAddresses();
-        }
-
-        // Close all modals
         function closeAllModals() {
-            addressModal.style.display = 'none';
-            confirmModal.style.display = 'none';
+            document.getElementById('addressModal').style.display = 'none';
+            document.getElementById('confirmModal').style.display = 'none';
         }
 
-        // Initialize with sample data if empty (for demo purposes)
-        if (addresses.length === 0) {
-            addresses = [
-                {
-                    id: 1,
-                    name: "Alamat Rumah",
-                    recipient: "Adelia ",
-                    phone: "081234567890",
-                    province: "Jawa Barat",
-                    city: "Bandung",
-                    district: "Coblong",
-                    postalCode: "40132",
-                    address: "Jl. Melati No. 123, RT 05/RW 02\nKel. Sukajadi, Kec. Coblong\nKota Bandung",
-                    isDefault: true
-                },
-                {
-                    id: 2,
-                    name: "Alamat Kantor",
-                    recipient: "Adelia ",
-                    phone: "081234567890",
-                    province: "Jawa Barat",
-                    city: "Bandung",
-                    district: "Bandung Wetan",
-                    postalCode: "40115",
-                    address: "Gedung Buku Indah Lt. 5\nJl. Merdeka No. 45\nKota Bandung",
-                    isDefault: false
-                }
-            ];
-            renderAddresses();
-        }
-                
-        // JavaScript to handle the dropdown behavior
+        // Profile dropdown behavior [Same as before]
         document.addEventListener('DOMContentLoaded', function() {
             const profileDropdown = document.querySelector('.profile-dropdown');
             const dropdownMenu = document.querySelector('.profile-dropdown-menu');
             
-            // Keep dropdown open when moving between icon and menu
             let dropdownTimeout;
             
             profileDropdown.addEventListener('mouseenter', function() {
@@ -1238,14 +1170,13 @@
             });
             
             profileDropdown.addEventListener('mouseleave', function() {
-                // Start timeout when leaving the dropdown area
                 dropdownTimeout = setTimeout(() => {
                     dropdownMenu.style.opacity = '0';
                     dropdownMenu.style.visibility = 'hidden';
                     setTimeout(() => {
                         dropdownMenu.style.display = 'none';
                     }, 200);
-                }, 300); // 300ms delay before closing
+                }, 300);
             });
             
             dropdownMenu.addEventListener('mouseenter', function() {

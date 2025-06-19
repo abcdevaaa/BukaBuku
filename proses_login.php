@@ -17,8 +17,6 @@ if (mysqli_num_rows($query) == 1) {
                     $_SESSION['username'] = $dataUser['username'];
                     $_SESSION['email'] = $dataUser['email'];
                     $_SESSION['role'] = $dataUser['role'];
-                    $_SESSION['role'] = $dataUser['role'];
-
     
                     header("location:index.php?login=sukses");
                     exit;

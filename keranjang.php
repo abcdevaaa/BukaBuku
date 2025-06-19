@@ -27,7 +27,7 @@ while ($buku = mysqli_fetch_assoc($queryK)) {
 // Reset pointer
 mysqli_data_seek($queryK, 0);
 
-$query = mysqli_query($koneksi,"SELECT * FROM buku");
+$query = mysqli_query($koneksi,"SELECT * FROM buku ORDER BY RAND() limit 7");
 $queryB = mysqli_query($koneksi, "SELECT * FROM buku");
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
@@ -394,6 +394,6 @@ document.getElementById('formCheckout').addEventListener('submit', function(e) {
 });
 
 </script>
-    <!-- <script src="keranjang.js"></script> -->
+    <script src="keranjang.js"></script>
 </body>
 </html>

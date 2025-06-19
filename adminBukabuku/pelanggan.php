@@ -1,3 +1,62 @@
+<?php
+session_start();
+include('../koneksi.php');
+
+// Main query to get customers
+$query = mysqli_query($koneksi, "SELECT users.id_users, users.username, 
+                                users.email, users.profil, alamat.no_telepon, alamat.alamat_lengkap,
+                                alamat.kabupaten, alamat.provinsi, alamat.kode_pos
+                                FROM users JOIN alamat ON alamat.id_users=users.id_users
+                                WHERE users.role = 'user'");
+
+// Check if we're showing details
+$show_detail = isset($_GET['detail_id']);
+$detail_data = null;
+$order_stats = null;
+
+if ($show_detail) {
+    $detail_id = $_GET['detail_id'];
+    $detail_query = mysqli_query($koneksi, "SELECT users.id_users, users.username, 
+                                          users.email, users.profil, alamat.no_telepon, 
+                                          alamat.alamat_lengkap, alamat.kabupaten, 
+                                          alamat.provinsi, alamat.kode_pos
+                                          FROM users JOIN alamat ON alamat.id_users=users.id_users
+                                          WHERE users.id_users = '$detail_id'");
+    $detail_data = mysqli_fetch_assoc($detail_query);
+    
+    $stats_query = mysqli_query($koneksi, 
+        "SELECT 
+            COUNT(*) as total_orders,
+            SUM(total_belanja) as total_spent,
+            MAX(tanggal_pesanan) as last_order_date
+        FROM pesanan 
+        WHERE id_users = '$detail_id'");
+    
+    $order_stats = mysqli_fetch_assoc($stats_query);
+    
+    if ($order_stats['last_order_date']) {
+        $order_stats['last_order_date'] = date('d M Y', strtotime($order_stats['last_order_date']));
+    } else {
+        $order_stats['last_order_date'] = 'Belum ada pesanan';
+    }
+    
+    if ($order_stats['total_spent']) {
+        $order_stats['total_spent'] = 'Rp ' . number_format($order_stats['total_spent'], 0, ',', '.');
+    } else {
+        $order_stats['total_spent'] = 'Rp 0';
+    }
+}
+
+// Check if we're deleting
+if (isset($_GET['delete_id'])) {
+    $delete_id = $_GET['delete_id'];
+    mysqli_query($koneksi, "DELETE FROM users WHERE id_users = '$delete_id'");
+    mysqli_query($koneksi, "DELETE FROM alamat WHERE id_users = '$delete_id'");
+    header("Location: pelanggan.php?deleted=true");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -541,12 +600,12 @@
                     <span class="text">Pesanan</span>
                 </a>
             </li>
-            <!-- <li>
-                <a href="laporan.html">
+            <li>
+                <a href="laporan.php">
                     <i class='bx bxs-doughnut-chart'></i>
                     <span class="text">Laporan</span>
                 </a>
-            </li> -->
+            </li>
             <li class="active">
                 <a href="pelanggan.php">
                     <i class='bx bxs-group'></i>
@@ -555,12 +614,6 @@
             </li>
         </ul>
         <ul class="side-menu">
-            <li>
-                <a href="settings.html">
-                    <i class='bx bxs-cog'></i>
-                    <span class="text">Settings</span>
-                </a>
-            </li>
             <li>
                 <a href="#" class="logout">
                     <i class='bx bxs-log-out-circle'></i>
@@ -580,16 +633,18 @@
             </div>
             
             <div class="nav-right">
+                <input type="checkbox" id="switch-mode" hidden>
+                <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
                     <img src="image/profile-picture.jpg" alt="Profile Image">
                 </a>
             </div>
             
+            
             <!-- Profile Dropdown -->
             <div class="profile-dropdown" id="profile-dropdown">
-                <a href="profile.html"><i class='bx bxs-user'></i> Profil Saya</a>
-                <a href="settings.html"><i class='bx bxs-cog'></i> Pengaturan</a>
-                <a href="#"><i class='bx bxs-log-out-circle'></i> Logout</a>
+                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
+                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
             </div>
         </nav>
         <!-- NAVBAR -->
@@ -616,143 +671,39 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Nama</th>
+                            <th>ID</th>
+                            <th>Username</th>
                             <th>Email</th>
                             <th>Telepon</th>
-                            <th>Total Pesanan</th>
-                            <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Data Pelanggan 1 -->
+                         <?php while($users = mysqli_fetch_assoc($query)) : ?>
                         <tr>
-                            <td>1</td>
+                            <td><?= $users['id_users'] ?></td>
                             <td>
                                 <div class="customer-name-avatar">
-                                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="John Doe" class="customer-avatar">
-                                    John Doe
+                                    <img src="../image/<?= $users['profil'] ?>" alt="<?= $users['username'] ?>" class="customer-avatar">
+                                    <?= $users['username'] ?>
                                 </div>
                             </td>
-                            <td>john.doe@example.com</td>
-                            <td>081234567890</td>
-                            <td>5</td>
-                            <td><span class="customer-status status-active">Aktif</span></td>
+                            <td><?= $users['email'] ?></td>
+                            <td><?= $users['no_telepon'] ?></td>
                             <td>
                                 <div class="customer-actions">
-                                    <div class="btn-icon view" onclick="viewCustomerDetail(1)">
+                                    <a href="?detail_id=<?= $users['id_users'] ?>" class="btn-icon view">
                                         <i class='bx bx-show'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(1, 'John Doe')">
+                                    </a>
+                                    <a href="?delete_id=<?= $users['id_users'] ?>" class="btn-icon delete" onclick="return confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')">
                                         <i class='bx bx-trash'></i>
-                                    </div>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
+                        <?php endwhile ?>
                         
-                        <!-- Data Pelanggan 2 -->
-                        <tr>
-                            <td>2</td>
-                            <td>
-                                <div class="customer-name-avatar">
-                                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jane Smith" class="customer-avatar">
-                                    Jane Smith
-                                </div>
-                            </td>
-                            <td>jane.smith@example.com</td>
-                            <td>082345678901</td>
-                            <td>3</td>
-                            <td><span class="customer-status status-active">Aktif</span></td>
-                            <td>
-                                <div class="customer-actions">
-                                    <div class="btn-icon view" onclick="viewCustomerDetail(2)">
-                                        <i class='bx bx-show'></i>
-                                    </div>
-                                    <div class="btn-icon delete" onclick="showDeleteModal(2, 'Jane Smith')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <!-- Data Pelanggan 3 -->
-                        <tr>
-                            <td>3</td>
-                            <td>
-                                <div class="customer-name-avatar">
-                                    <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Robert Johnson" class="customer-avatar">
-                                    Robert Johnson
-                                </div>
-                            </td>
-                            <td>robert.j@example.com</td>
-                            <td>083456789012</td>
-                            <td>7</td>
-                            <td><span class="customer-status status-active">Aktif</span></td>
-                            <td>
-                                <div class="customer-actions">
-                                    <div class="btn-icon view" onclick="viewCustomerDetail(3)">
-                                        <i class='bx bx-show'></i>
-                                    </div>
-                                    
-                                    <div class="btn-icon delete" onclick="showDeleteModal(3, 'Robert Johnson')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <!-- Data Pelanggan 4 -->
-                        <tr>
-                            <td>4</td>
-                            <td>
-                                <div class="customer-name-avatar">
-                                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Sarah Williams" class="customer-avatar">
-                                    Sarah Williams
-                                </div>
-                            </td>
-                            <td>sarah.w@example.com</td>
-                            <td>084567890123</td>
-                            <td>2</td>
-                            <td><span class="customer-status status-inactive">Nonaktif</span></td>
-                            <td>
-                                <div class="customer-actions">
-                                    <div class="btn-icon view" onclick="viewCustomerDetail(4)">
-                                        <i class='bx bx-show'></i>
-                                    </div>
-                                    
-                                    <div class="btn-icon delete" onclick="showDeleteModal(4, 'Sarah Williams')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <!-- Data Pelanggan 5 -->
-                        <tr>
-                            <td>5</td>
-                            <td>
-                                <div class="customer-name-avatar">
-                                    <img src="https://randomuser.me/api/portraits/men/91.jpg" alt="Michael Brown" class="customer-avatar">
-                                    Michael Brown
-                                </div>
-                            </td>
-                            <td>michael.b@example.com</td>
-                            <td>085678901234</td>
-                            <td>4</td>
-                            <td><span class="customer-status status-active">Aktif</span></td>
-                            <td>
-                                <div class="customer-actions">
-                                    <div class="btn-icon view" onclick="viewCustomerDetail(5)">
-                                        <i class='bx bx-show'></i>
-                                    </div>
-                                    
-                                    <div class="btn-icon delete" onclick="showDeleteModal(5, 'Michael Brown')">
-                                        <i class='bx bx-trash'></i>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -774,332 +725,125 @@
     </section>
     <!-- CONTENT -->
 
-    <!-- Customer Detail Modal -->
-    <div class="modal" id="detail-modal">
+    <!-- Customer Detail Section (akan muncul jika ada parameter detail_id) -->
+    <?php if ($show_detail && $detail_data): ?>
+    <div class="modal" style="display: flex;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Detail Pelanggan</h3>
-                <span class="close" onclick="closeModal('detail-modal')">&times;</span>
+                <a href="pelanggan.php" class="close">&times;</a>
             </div>
             <div class="modal-body">
-                <!-- Detail untuk Pelanggan 1 -->
-                <div id="detail-customer-1" class="customer-detail-content">
-                    <div class="customer-detail">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Customer Avatar" class="detail-avatar">
-                        <h4>Informasi Pribadi</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Nama Lengkap:</div>
-                            <div class="detail-value">John Doe</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value">john.doe@example.com</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Telepon:</div>
-                            <div class="detail-value">081234567890</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value"><span class="customer-status status-active">Aktif</span></div>
-                        </div>
+                <div class="customer-detail">
+                    <img src="../image/<?= $detail_data['profil'] ?>" alt="Customer Avatar" class="detail-avatar">
+                    <h4>Informasi Pribadi</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Username:</div>
+                        <div class="detail-value"><?= $detail_data['username'] ?></div>
                     </div>
-                    <div class="customer-detail">
-                        <h4>Alamat</h4>
-                        <div class="detail-row">
-                            <div class="detail-value">
-                                Jl. Contoh No. 123, Jakarta Selatan, DKI Jakarta 12345
-                            </div>
-                        </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Email:</div>
+                        <div class="detail-value"><?= $detail_data['email'] ?></div>
                     </div>
-                    <div class="customer-detail">
-                        <h4>Statistik Pesanan</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Pesanan:</div>
-                            <div class="detail-value">5</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Belanja:</div>
-                            <div class="detail-value">Rp 1.250.000</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Pesanan Terakhir:</div>
-                            <div class="detail-value">15 Mei 2023</div>
+                    <div class="detail-row">
+                        <div class="detail-label">Telepon:</div>
+                        <div class="detail-value"><?= $detail_data['no_telepon'] ?></div>
+                    </div>
+                </div>
+                <div class="customer-detail">
+                    <h4>Alamat</h4>
+                    <div class="detail-row">
+                        <div class="detail-value">
+                            <?= $detail_data['alamat_lengkap'] ?>, <?= $detail_data['kabupaten'] ?>, 
+                            <?= $detail_data['provinsi'] ?> <?= $detail_data['kode_pos'] ?>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Detail untuk Pelanggan 2 -->
-                <div id="detail-customer-2" class="customer-detail-content" style="display:none;">
-                    <div class="customer-detail">
-                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Customer Avatar" class="detail-avatar">
-                        <h4>Informasi Pribadi</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Nama Lengkap:</div>
-                            <div class="detail-value">Jane Smith</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value">jane.smith@example.com</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Telepon:</div>
-                            <div class="detail-value">082345678901</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value"><span class="customer-status status-active">Aktif</span></div>
-                        </div>
+                <div class="customer-detail">
+                    <h4>Statistik Pesanan</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Total Pesanan:</div>
+                        <div class="detail-value"><?= $order_stats['total_orders'] ?? 0 ?></div>
                     </div>
-                    <div class="customer-detail">
-                        <h4>Alamat</h4>
-                        <div class="detail-row">
-                            <div class="detail-value">
-                                Jl. Sample No. 456, Bandung, Jawa Barat 45678
-                            </div>
-                        </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Total Belanja:</div>
+                        <div class="detail-value"><?= $order_stats['total_spent'] ?? 'Rp 0' ?></div>
                     </div>
-                    <div class="customer-detail">
-                        <h4>Statistik Pesanan</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Pesanan:</div>
-                            <div class="detail-value">3</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Belanja:</div>
-                            <div class="detail-value">Rp 750.000</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Pesanan Terakhir:</div>
-                            <div class="detail-value">10 Mei 2023</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Detail untuk Pelanggan 3 -->
-                <div id="detail-customer-3" class="customer-detail-content" style="display:none;">
-                    <div class="customer-detail">
-                        <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Customer Avatar" class="detail-avatar">
-                        <h4>Informasi Pribadi</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Nama Lengkap:</div>
-                            <div class="detail-value">Robert Johnson</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value">robert.j@example.com</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Telepon:</div>
-                            <div class="detail-value">083456789012</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value"><span class="customer-status status-active">Aktif</span></div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Alamat</h4>
-                        <div class="detail-row">
-                            <div class="detail-value">
-                                Jl. Test No. 789, Surabaya, Jawa Timur 67890
-                            </div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Statistik Pesanan</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Pesanan:</div>
-                            <div class="detail-value">7</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Belanja:</div>
-                            <div class="detail-value">Rp 1.850.000</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Pesanan Terakhir:</div>
-                            <div class="detail-value">12 Mei 2023</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Detail untuk Pelanggan 4 -->
-                <div id="detail-customer-4" class="customer-detail-content" style="display:none;">
-                    <div class="customer-detail">
-                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Customer Avatar" class="detail-avatar">
-                        <h4>Informasi Pribadi</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Nama Lengkap:</div>
-                            <div class="detail-value">Sarah Williams</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value">sarah.w@example.com</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Telepon:</div>
-                            <div class="detail-value">084567890123</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value"><span class="customer-status status-inactive">Nonaktif</span></div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Alamat</h4>
-                        <div class="detail-row">
-                            <div class="detail-value">
-                                Jl. Demo No. 321, Yogyakarta, DIY 54321
-                            </div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Statistik Pesanan</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Pesanan:</div>
-                            <div class="detail-value">2</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Belanja:</div>
-                            <div class="detail-value">Rp 350.000</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Pesanan Terakhir:</div>
-                            <div class="detail-value">20 April 2023</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Detail untuk Pelanggan 5 -->
-                <div id="detail-customer-5" class="customer-detail-content" style="display:none;">
-                    <div class="customer-detail">
-                        <img src="https://randomuser.me/api/portraits/men/91.jpg" alt="Customer Avatar" class="detail-avatar">
-                        <h4>Informasi Pribadi</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Nama Lengkap:</div>
-                            <div class="detail-value">Michael Brown</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value">michael.b@example.com</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Telepon:</div>
-                            <div class="detail-value">085678901234</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value"><span class="customer-status status-active">Aktif</span></div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Alamat</h4>
-                        <div class="detail-row">
-                            <div class="detail-value">
-                                Jl. Contoh Baru No. 654, Medan, Sumatera Utara 76543
-                            </div>
-                        </div>
-                    </div>
-                    <div class="customer-detail">
-                        <h4>Statistik Pesanan</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Pesanan:</div>
-                            <div class="detail-value">4</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Total Belanja:</div>
-                            <div class="detail-value">Rp 950.000</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Pesanan Terakhir:</div>
-                            <div class="detail-value">8 Mei 2023</div>
-                        </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Pesanan Terakhir:</div>
+                        <div class="detail-value"><?= $order_stats['last_order_date'] ?? 'Belum ada pesanan' ?></div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeModal('detail-modal')">Tutup</button>
+                <a href="pelanggan.php" class="btn btn-primary">Tutup</a>
             </div>
         </div>
     </div>
+    <?php endif ?>
 
-    <!-- Delete Confirmation Modal -->
-    <div class="modal" id="delete-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Konfirmasi Hapus</h3>
-                <span class="close" onclick="closeModal('delete-modal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p id="delete-message">Apakah Anda yakin ingin menghapus pelanggan ini? Semua data terkait akan dihapus permanen.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal('delete-modal')">Batal</button>
-                <button class="btn btn-danger" id="confirm-delete-btn">Hapus</button>
-            </div>
-        </div>
-    </div>
 
     <script>
+        const profileBtn = document.getElementById('profile-btn');
+        const profileDropdown = document.getElementById('profile-dropdown');
         // Toggle sidebar
         document.getElementById('sidebar-toggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('hide');
         });
 
         // Toggle profile dropdown
-        document.getElementById('profile-btn').addEventListener('click', (e) => {
+        profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            document.getElementById('profile-dropdown').classList.toggle('show');
+            profileDropdown.classList.toggle('show');
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if(!document.getElementById('profile-btn').contains(e.target) && 
-               !document.getElementById('profile-dropdown').contains(e.target)) {
-                document.getElementById('profile-dropdown').classList.remove('show');
+            if(!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('show');
             }
         });
 
         // View customer details
-        function viewCustomerDetail(id) {
-            // Hide all detail content first
-            document.querySelectorAll('.customer-detail-content').forEach(content => {
-                content.style.display = 'none';
-            });
+        // function viewCustomerDetail(id) {
+        //     // Hide all detail content first
+        //     document.querySelectorAll('.customer-detail-content').forEach(content => {
+        //         content.style.display = 'none';
+        //     });
             
-            // Show selected detail
-            const detailContent = document.getElementById(`detail-customer-${id}`);
-            if (detailContent) {
-                detailContent.style.display = 'block';
-            }
+        //     // Show selected detail
+        //     const detailContent = document.getElementById(`detail-customer-${id}`);
+        //     if (detailContent) {
+        //         detailContent.style.display = 'block';
+        //     }
             
-            document.getElementById('detail-modal').classList.add('show');
-        }
+        //     document.getElementById('detail-modal').classList.add('show');
+        // }
 
-        // Show delete confirmation modal
-        function showDeleteModal(id, name) {
-            document.getElementById('delete-message').textContent = 
-                `Apakah Anda yakin ingin menghapus pelanggan "${name}"? Semua data terkait akan dihapus permanen.`;
-            document.getElementById('delete-modal').classList.add('show');
-        }
+        // // Show delete confirmation modal
+        // function showDeleteModal(id, name) {
+        //     document.getElementById('delete-message').textContent = 
+        //         `Apakah Anda yakin ingin menghapus pelanggan "${name}"? Semua data terkait akan dihapus permanen.`;
+        //     document.getElementById('delete-modal').classList.add('show');
+        // }
 
-        // Close modal function
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
+        // // Close modal function
+        // function closeModal(modalId) {
+        //     document.getElementById(modalId).classList.remove('show');
+        // }
 
-        // Confirm delete button click
-        document.getElementById('confirm-delete-btn').addEventListener('click', () => {
-            alert('Pelanggan berhasil dihapus');
-            closeModal('delete-modal');
-        });
+        // // Confirm delete button click
+        // document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+        //     alert('Pelanggan berhasil dihapus');
+        //     closeModal('delete-modal');
+        // });
 
-        // Close modals when clicking outside
-        window.addEventListener('click', (event) => {
-            if(event.target.classList.contains('modal')) {
-                closeModal(event.target.id);
-            }
-        });
+        // // Close modals when clicking outside
+        // window.addEventListener('click', (event) => {
+        //     if(event.target.classList.contains('modal')) {
+        //         closeModal(event.target.id);
+        //     }
+        // });
     </script>
 </body>
 </html>
