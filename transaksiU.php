@@ -944,7 +944,11 @@ function getStatusBadgeClass($status) {
                     <div class="transaction-product">
                         <img src="<?= $gambarBuku ?>" alt="<?= $detail['judul'] ?>" class="product-image">
                         <div class="product-info">
-                            <h3 class="product-name"><?= $detail['judul'] ?></h3>
+                            <h3 class="product-name">
+                                <a href="rincian.php?id_pesanan=<?= $pesanan['id_pesanan'] ?>" style="color: inherit; text-decoration: none;">
+                                    <?= $detail['judul'] ?>
+                                </a>
+                            </h3>
                             <p class="product-quantity"><?= $detail['jumlah'] ?> Barang</p>
                         </div>
                         <div class="transaction-price">
