@@ -138,6 +138,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 }
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 
 <!DOCTYPE html>
@@ -975,7 +980,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div>
             
@@ -998,15 +1007,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="head-title">
                 <div class="left">
                     <h1>Manajemen Buku</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.php">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Manajemen Buku</a>
-                        </li>
-                    </ul>
                 </div>
             </div>
 

@@ -3,10 +3,10 @@ session_start();
 include('../koneksi.php');
 
 // Cek apakah user sudah login dan memiliki role admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../LoginRegister.php");
-    exit();
-}
+// if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+//     header("Location: ../LoginRegister.php");
+//     exit();
+// }
 
 // Query untuk mendapatkan data pesanan terbaru
 $query_pesanan = "SELECT p.*, u.username, mp.nama_metode as metode_pembayaran, mpg.nama_metode as metode_pengiriman 
@@ -29,6 +29,11 @@ $total_pelanggan = mysqli_fetch_assoc($result_total_pelanggan)['total'];
 $query_total_penjualan = "SELECT SUM(total_belanja) as total FROM pesanan WHERE status = 'pesanan diterima'";
 $result_total_penjualan = mysqli_query($koneksi, $query_total_penjualan);
 $total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -825,31 +830,6 @@ $total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
     </section>
     <!-- SIDEBAR -->
 
-    <!-- CONTENT -->
-    <!-- <section id="content">
-        NAVBAR
-        <nav>
-            <div class="nav-left">
-                <i class='bx bx-menu' id="sidebar-toggle"></i>
-                <a href="#" class="nav-link">Dashboard</a>
-            </div>
-            
-            <div class="nav-right">
-                <input type="checkbox" id="switch-mode" hidden>
-                <label for="switch-mode" class="switch-mode"></label>
-                <a href="#" class="profile" id="profile-btn">
-                    <img src="image/𓂂  ♱⠀◌  ★⠀◯  ⭑ ⸱ ៰  ͘ ࣭ 𓂂  ♱⠀◌ •.jpeg" alt="Profile Image">
-                </a>
-            </div>
-            
-            Profile Dropdown
-            <div class="profile-dropdown" id="profile-dropdown">
-                <a href="profilA.php"><i class='bx bxs-user'></i> Profil Saya</a>
-                <a href="../logout.php" id="logout-dropdown-btn"><i class='bx bxs-log-out-circle'></i> Logout</a>
-            </div>
-        </nav> -->
-        <!-- NAVBAR -->
-
         <!-- CONTENT -->
     <section id="content">
         <!-- NAVBAR -->
@@ -862,7 +842,11 @@ $total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="../<?php echo $_SESSION['profil'] ?? 'image/default-profile.png'; ?>" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div>
             
@@ -879,11 +863,6 @@ $total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
             <div class="head-title">
                 <div class="left">
                     <h1>Dashboard</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="#" class="active">Dashboard</a>
-                        </li>
-                    </ul>
                 </div>
                 <a href="laporan.php" class="btn-download">
                     <i class='bx bxs-cloud-download'></i>

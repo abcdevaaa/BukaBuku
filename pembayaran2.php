@@ -29,7 +29,7 @@ $query_detail = "SELECT dp.*, b.judul, b.gambar
 $result_detail = mysqli_query($koneksi, $query_detail);
 $detail = mysqli_fetch_assoc($result_detail);
 
-// Hitung waktu kadaluarsa (15 menit dari sekarang)
+// Hitung waktu kadaluarsa 
 $waktu_kadaluarsa = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 ?>
 
@@ -718,13 +718,11 @@ $waktu_kadaluarsa = date('Y-m-d H:i:s', strtotime('+15 minutes'));
                     <div class="category-dropdown">
                         <p class="category-toggle">Kategori <i class="ri-arrow-down-s-line"></i></p>
                         <div class="category-menu">
-                            <a href="k_fiksi.html">Buku Fiksi</a>
-                            <a href="k_nonfiksi.html">Buku Nonfiksi</a>
-                            <a href="k_anak.html">Buku Anak</a>
-                            <a href="k_pelajaran.html">Buku Pelajaran</a>
-                            <a href="k_agama.html">Buku Agama</a>
-                            <a href="k_sejarah.html">Buku Sejarah</a>
-                            <a href="k_komik.html">Komik</a>
+                            <?php while($kategori = mysqli_fetch_assoc($queryKategori2)) { ?>
+                                <a href="kategori.php?id=<?= $kategori['id_kategori'] ?>">
+                                        <?= $kategori['nama_kategori'] ?>
+                                </a>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>
@@ -733,21 +731,21 @@ $waktu_kadaluarsa = date('Y-m-d H:i:s', strtotime('+15 minutes'));
                     <i class="ri-search-line"></i>
                 </div>
                 <div class="navbar-right">
-                    <a href="#" class="fas fa-shopping-cart"></a>
+                    <a href="keranjang.php" class="fas fa-shopping-cart"></a>
                     <div class="profile-dropdown">
                         <div class="profile-icon">
                             <i class="ri-user-line"></i>
                         </div>
                         <div class="profile-dropdown-menu">
                             <div class="profile-info">
-                                <div class="profile-name">Adelia</div>
-                                <div class="profile-email">adeliasa@gmail.com</div>
-                            </div>
+                            <div class="profile-name"><?= $_SESSION['username'] ?></div>
+                            <div class="profile-email"><?= $_SESSION['email'] ?></div>
+                        </div>
                             <ul class="profile-menu">
-                                <li><a href="#"><i class="ri-user-line"></i> Akun</a></li>
-                                <li><a href="#"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
-                                <li><a href="#"><i class="ri-heart-line"></i> Wishlist</a></li>
-                                <li><a href="#"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
+                                <li><a href="akunU.php"><i class="ri-user-line"></i> Akun</a></li>
+                                <li><a href="transaksiU.php"><i class="ri-shopping-bag-line"></i> Transaksi</a></li>
+                                <li><a href="wishlist.php"><i class="ri-heart-line"></i> Wishlist</a></li>
+                                <li><a href="logout.php"><i class="ri-logout-box-line"></i> Keluar Akun</a></li>
                             </ul>
                         </div>
                     </div>

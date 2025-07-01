@@ -12,6 +12,13 @@ $queryBuku = mysqli_query($koneksi, "SELECT * FROM buku ORDER BY RAND() limit 6"
 $queryBuku01 = mysqli_query($koneksi, "SELECT * FROM buku WHERE id_buku = $id_buku");
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 
+$isInWishlist = false;
+if (isset($_SESSION['id_users'])) {
+    $id_users = $_SESSION['id_users'];
+    $checkWishlist = mysqli_query($koneksi, "SELECT * FROM wishlist WHERE id_users = $id_users AND id_buku = $id_buku");
+    $isInWishlist = mysqli_num_rows($checkWishlist) > 0;
+}
+
 if ($buku = mysqli_fetch_assoc($query)) {
     
 ?>
@@ -887,7 +894,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
         </div>
     </header>
     
-    <!-- Main Content Wrapper -->
+     <!-- Main Content Wrapper -->
     <div class="main-wrapper">
         <div class="main-content">
             <div class="book-details">
@@ -897,7 +904,19 @@ if ($buku = mysqli_fetch_assoc($query)) {
                 <div class="details">
                     <h1><?= $buku['judul'] ?></h1>
                     <p class="harga">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></p>
-                    <button id="favorite-button"><i class="far fa-heart"></i> Favorit</button>
+                    <?php if (isset($_SESSION['id_users'])): ?>
+                        <form method="post" action="wishlist_action.php">
+                            <input type="hidden" name="id_buku" value="<?= $id_buku ?>">
+                            <button id="favorite-button" type="submit">
+                                <i class="<?= $isInWishlist ? 'fas' : 'far' ?> fa-heart"></i> 
+                                <?= $isInWishlist ? 'Hapus dari Favorit' : 'Favorit' ?>
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <a href="LoginRegister.php" id="favorite-button">
+                            <i class="far fa-heart"></i> Favorit
+                        </a>
+                    <?php endif; ?>
                     <div class="post">
                         <h2>Deskripsi</h2>
                         <p><?= substr($buku['deskripsi'], 0, 300) ?></p>
@@ -961,7 +980,7 @@ if ($buku = mysqli_fetch_assoc($query)) {
                 </div>
                 <div class="cart-actions">
                     <a href="tambah_keranjang.php?id_buku=<?= $buku['id_buku'] ?>" class="add-cart">Keranjang</a>
-                    <a href="checkout2.php?id_buku=<?= $buku['id_buku'] ?>" class="add-to-cart">Beli Sekarang</a>
+                    <a href="checkout2.php?id_buku=<?= $buku['id_buku'] ?>&jumlah=1" class="add-to-cart">Beli Sekarang</a>
                 </div>
                 <?php } ?>
             </div>

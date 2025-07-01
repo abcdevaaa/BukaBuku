@@ -2,31 +2,61 @@
 session_start();
 include 'koneksi.php';
 
-// Pastikan user sudah login
 if (!isset($_SESSION['id_users'])) {
     header("Location: LoginRegister.php");
     exit();
 }
 
-// Ambil data buku dari database berdasarkan parameter GET
-$id_buku = isset($_GET['id_buku']) ? (int)$_GET['id_buku'] : 0;
-$jumlah = isset($_GET['jumlah']) ? (int)$_GET['jumlah'] : 1;
+$from_cart = isset($_POST['from_cart']) ? true : false;
+$buku_items = [];
+$total_harga = 0;
 
-// Query data buku
-$query_buku = "SELECT * FROM buku WHERE id_buku = $id_buku";
-$result_buku = mysqli_query($koneksi, $query_buku);
-$buku = mysqli_fetch_assoc($result_buku);
+if ($from_cart) {
+    // Process cart checkout
+    if (isset($_POST['selected_items']) && isset($_POST['keranjang'])) {
+        $selected_items = $_POST['selected_items'];
+        $keranjang_data = $_POST['keranjang'];
+        
+        $id_list = implode(",", $selected_items);
+        $query_buku = "SELECT * FROM buku WHERE id_buku IN ($id_list)";
+        $result_buku = mysqli_query($koneksi, $query_buku);
+        
+        while ($buku = mysqli_fetch_assoc($result_buku)) {
+            $id_buku = $buku['id_buku'];
+            $buku['jumlah'] = $keranjang_data[$id_buku]['jumlah'];
+            $buku_items[] = $buku;
+            $total_harga += $buku['harga'] * $buku['jumlah'];
+        }
+    } else {
+        header("Location: keranjang.php");
+        exit();
+    }
+} else {
+    // Process direct purchase
+    $id_buku = isset($_GET['id_buku']) ? (int)$_GET['id_buku'] : 0;
+    $jumlah = isset($_GET['jumlah']) ? (int)$_GET['jumlah'] : 1;
+    
+    $query_buku = "SELECT * FROM buku WHERE id_buku = $id_buku";
+    $result_buku = mysqli_query($koneksi, $query_buku);
+    $buku = mysqli_fetch_assoc($result_buku);
+    
+    if ($buku) {
+        $buku['jumlah'] = $jumlah;
+        $buku_items = [$buku];
+        $total_harga = $buku['harga'] * $jumlah;
+    } else {
+        header("Location: index.php");
+        exit();
+    }
+}
 
-// Hitung total harga
-$total_harga = $buku['harga'] * $jumlah;
-
-// Query alamat pengguna
+// Get user address
 $id_users = $_SESSION['id_users'];
 $query_alamat = "SELECT * FROM alamat WHERE id_users = $id_users";
 $result_alamat = mysqli_query($koneksi, $query_alamat);
 $alamat = mysqli_fetch_assoc($result_alamat);
 
-// Query metode pengiriman
+// Get shipping methods
 $query_pengiriman = "SELECT * FROM metode_pengiriman";
 $result_pengiriman = mysqli_query($koneksi, $query_pengiriman);
 $metode_pengiriman = [];
@@ -34,11 +64,12 @@ while ($row = mysqli_fetch_assoc($result_pengiriman)) {
     $metode_pengiriman[] = $row;
 }
 
-// Set default shipping method (first one in the list)
+// Set default shipping
 $default_shipping = $metode_pengiriman[0] ?? null;
 $biaya_pengiriman = $default_shipping['biaya'] ?? 0;
 $total_belanja = $total_harga + $biaya_pengiriman;
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -434,9 +465,11 @@ $total_belanja = $total_harga + $biaya_pengiriman;
     <header>
         <div class="container">
             <nav class="navbar">
+                <a href="index.php">
                 <div class="logo-wrapper">
                     <img src="image/Navy Colorful fun Kids Book Store Logo.png" alt="Logo Bukabuku" class="logo">
                 </div>
+                </a>
             </nav>
         </div>
     </header>
@@ -446,17 +479,19 @@ $total_belanja = $total_harga + $biaya_pengiriman;
     <div class="checkout-content">
         <div class="order-section">
             <div class="order-card">
-                <h2>Pesanan 1</h2>
+                <h2>Pesanan</h2>
+                <?php foreach ($buku_items as $buku): ?>
                 <div class="order-item">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img src="image/<?php echo htmlspecialchars($buku['gambar']); ?>" alt="Book" style="width: 50px; height: 70px; object-fit: cover; border-radius: 5px;">
                         <div>
                             <div class="item-title"><?php echo htmlspecialchars($buku['judul']); ?></div>
-                            <div><?php echo $jumlah; ?> barang</div>
+                            <div><?php echo $buku['jumlah']; ?> barang</div>
                         </div>
                     </div>
-                    <div class="item-price">Rp<?php echo number_format($buku['harga'], 0, ',', '.'); ?></div>
+                    <div class="item-price">Rp<?php echo number_format($buku['harga'] * $buku['jumlah'], 0, ',', '.'); ?></div>
                 </div>
+                <?php endforeach; ?>
                 
                 <div class="divider"></div>
                 
@@ -574,8 +609,19 @@ $total_belanja = $total_harga + $biaya_pengiriman;
             <div class="shipping-methods">
                 <h2>Metode Pengiriman</h2>
                 <form id="shipping-form" action="metode_pembayaran.php" method="POST">
-                    <input type="hidden" name="id_buku" value="<?php echo $id_buku; ?>">
-                    <input type="hidden" name="jumlah" value="<?php echo $jumlah; ?>">
+                    <?php if ($from_cart): ?>
+                        <?php foreach ($selected_items as $id_buku): ?>
+                            <input type="hidden" name="selected_items[]" value="<?php echo $id_buku; ?>">
+                            <input type="hidden" name="keranjang[<?php echo $id_buku; ?>][jumlah]" 
+                                value="<?php echo $keranjang_data[$id_buku]['jumlah']; ?>">
+                        <?php endforeach; ?>
+                        <input type="hidden" name="from_cart" value="1">
+                        <input type="hidden" name="total_harga" value="<?php echo $total_harga; ?>">
+                    <?php else: ?>
+                        <input type="hidden" name="id_buku" value="<?php echo $buku_items[0]['id_buku']; ?>">
+                        <input type="hidden" name="jumlah" value="<?php echo $buku_items[0]['jumlah']; ?>">
+                        <input type="hidden" name="total_harga" value="<?php echo $total_harga; ?>">
+                    <?php endif; ?>
                     
                     <?php foreach ($metode_pengiriman as $pengiriman): ?>
                         <div class="shipping-method <?php echo $pengiriman['id_metodePengiriman'] == $default_shipping['id_metodePengiriman'] ? 'selected' : ''; ?>" 
@@ -611,7 +657,7 @@ $total_belanja = $total_harga + $biaya_pengiriman;
         <div class="summary-section">
             <h2>Ringkasan</h2>
             <div class="summary-row">
-                <div>Total Harga (<?php echo $jumlah; ?> Barang)</div>
+                <div>Total Harga (<?php echo array_sum(array_column($buku_items, 'jumlah')); ?> Barang)</div>
                 <div>Rp<?php echo number_format($total_harga, 0, ',', '.'); ?></div>
             </div>
             <div class="summary-row">
@@ -666,7 +712,7 @@ $total_belanja = $total_harga + $biaya_pengiriman;
             
             // Get the item price and quantity from PHP
             const itemPrice = <?php echo $total_harga; ?>;
-            const quantity = <?php echo $jumlah; ?>;
+            const quantity = <?php echo array_sum(array_column($buku_items, 'jumlah')); ?>;
             
             // Initialize with default values
             let shippingCost = <?php echo $biaya_pengiriman; ?>;
@@ -714,6 +760,13 @@ $total_belanja = $total_harga + $biaya_pengiriman;
             
             // Checkout button click
             checkoutBtn.addEventListener('click', function() {
+                // Validate address exists
+                if (!document.getElementById('address-card') || 
+                    !document.getElementById('address-card').classList.contains('active')) {
+                    alert('Silakan tambahkan alamat pengiriman terlebih dahulu');
+                    return;
+                }
+                
                 document.getElementById('shipping-form').submit();
             });
             

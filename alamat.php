@@ -1036,105 +1036,80 @@ while ($alamat = mysqli_fetch_assoc($queryAlamat)) {
     </footer>
 
    <script>
-        // DOM Elements
-        const addressList = document.getElementById('addressList');
-        const addAddressBtn = document.getElementById('addAddressBtn');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal elements
         const addressModal = document.getElementById('addressModal');
         const confirmModal = document.getElementById('confirmModal');
         const addressForm = document.getElementById('addressForm');
         const deleteForm = document.getElementById('deleteForm');
         const modalTitle = document.getElementById('modalTitle');
-        const closeButtons = document.getElementsByClassName('close');
+        const closeButtons = document.querySelectorAll('.close');
         const cancelBtn = document.getElementById('cancelBtn');
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-        const confirmBtn = document.getElementById('confirmBtn');
-        const confirmMessage = document.getElementById('confirmMessage');
         const formAction = document.getElementById('formAction');
         const addressIdInput = document.getElementById('addressId');
         const deleteAddressIdInput = document.getElementById('deleteAddressId');
 
-        // Variables for tracking state
-        let currentAction = 'add';
+        // Open modal for adding new address
+        document.getElementById('addAddressBtn').addEventListener('click', () => {
+            openAddressModal('add');
+        });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Event delegation for edit and delete buttons
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('edit-btn')) {
-                    const id = e.target.getAttribute('data-id');
-                    console.log('Edit button clicked, ID:', id);
-                    openAddressModal('edit', id);
-                }
-                
-                if (e.target.classList.contains('delete-btn')) {
-                    const id = e.target.getAttribute('data-id');
-                    console.log('Delete button clicked, ID:', id);
-                    confirmDeleteAddress(id);
-                }
-            });
+        // Handle edit and delete buttons using event delegation
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('edit-btn')) {
+                e.preventDefault();
+                const id = e.target.getAttribute('data-id');
+                openAddressModal('edit', id);
+            }
+            
+            if (e.target.classList.contains('delete-btn')) {
+                e.preventDefault();
+                const id = e.target.getAttribute('data-id');
+                confirmDeleteAddress(id);
+            }
+        });
 
-            // Modal handling
-            const addAddressBtn = document.getElementById('addAddressBtn');
-            const addressModal = document.getElementById('addressModal');
-            const confirmModal = document.getElementById('confirmModal');
-            const closeButtons = document.querySelectorAll('.close');
-            const cancelBtn = document.getElementById('cancelBtn');
-            const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-
-            addAddressBtn.addEventListener('click', () => openAddressModal('add'));
-            
-            closeButtons.forEach(button => {
-                button.addEventListener('click', closeAllModals);
-            });
-            
-            cancelBtn.addEventListener('click', closeAllModals);
-            cancelConfirmBtn.addEventListener('click', closeAllModals);
-            
-            // Close modal when clicking outside
-            window.addEventListener('click', function(event) {
-                if (event.target === addressModal) {
-                    closeAllModals();
-                }
-                if (event.target === confirmModal) {
-                    closeAllModals();
-                }
-            });
+        // Close modals
+        closeButtons.forEach(button => {
+            button.addEventListener('click', closeAllModals);
+        });
+        
+        cancelBtn.addEventListener('click', closeAllModals);
+        cancelConfirmBtn.addEventListener('click', closeAllModals);
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === addressModal) {
+                closeAllModals();
+            }
+            if (event.target === confirmModal) {
+                closeAllModals();
+            }
         });
 
         function openAddressModal(action, id = null) {
-            console.log('Opening modal with action:', action, 'and ID:', id);
-            const addressModal = document.getElementById('addressModal');
-            const formAction = document.getElementById('formAction');
-            const addressIdInput = document.getElementById('addressId');
-            const modalTitle = document.getElementById('modalTitle');
-            
-            currentAction = action;
             formAction.value = action;
             
             if (action === 'add') {
                 modalTitle.textContent = 'Tambah Alamat Baru';
-                document.getElementById('addressForm').reset();
+                addressForm.reset();
                 addressIdInput.value = '';
             } else if (action === 'edit' && id) {
                 modalTitle.textContent = 'Ubah Alamat';
                 addressIdInput.value = id;
                 
-                // Find the address card and populate the form
-                const addressCard = document.querySelector(`.edit-btn[data-id="${id}"]`).closest('.address-card');
-                if (addressCard) {
-                    const addressDetail = addressCard.querySelector('.address-detail').textContent;
-                    const lines = addressDetail.split('\n').map(line => line.trim());
-                    
-                    document.getElementById('recipientName').value = lines[0];
-                    document.getElementById('phoneNumber').value = lines[3].replace('No. HP: ', '');
-                    
-                    const addressParts = lines[2].split(', ');
-                    document.getElementById('city').value = addressParts[0];
-                    
-                    const provincePostal = addressParts[1].split(' ');
-                    document.getElementById('province').value = provincePostal.slice(0, -1).join(' ');
-                    document.getElementById('postalCode').value = provincePostal[provincePostal.length - 1];
-                    
-                    document.getElementById('fullAddress').value = lines[1];
+                // Get address data from PHP array
+                const addresses = <?php echo json_encode($addresses); ?>;
+                const address = addresses.find(addr => addr.id_alamat == id);
+                
+                if (address) {
+                    document.getElementById('recipientName').value = address.nama_penerima;
+                    document.getElementById('phoneNumber').value = address.no_telepon;
+                    document.getElementById('province').value = address.provinsi;
+                    document.getElementById('city').value = address.kabupaten;
+                    document.getElementById('postalCode').value = address.kode_pos;
+                    document.getElementById('fullAddress').value = address.alamat_lengkap;
                 }
             }
             
@@ -1142,57 +1117,42 @@ while ($alamat = mysqli_fetch_assoc($queryAlamat)) {
         }
 
         function confirmDeleteAddress(id) {
-            console.log('Confirming deletion of address ID:', id);
-            const deleteAddressIdInput = document.getElementById('deleteAddressId');
             deleteAddressIdInput.value = id;
-            document.getElementById('confirmModal').style.display = 'block';
+            confirmModal.style.display = 'block';
         }
 
         function closeAllModals() {
-            document.getElementById('addressModal').style.display = 'none';
-            document.getElementById('confirmModal').style.display = 'none';
+            addressModal.style.display = 'none';
+            confirmModal.style.display = 'none';
         }
 
-        // Profile dropdown behavior [Same as before]
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileDropdown = document.querySelector('.profile-dropdown');
-            const dropdownMenu = document.querySelector('.profile-dropdown-menu');
-            
-            let dropdownTimeout;
-            
-            profileDropdown.addEventListener('mouseenter', function() {
-                clearTimeout(dropdownTimeout);
-                dropdownMenu.style.display = 'block';
-                setTimeout(() => {
-                    dropdownMenu.style.opacity = '1';
-                    dropdownMenu.style.visibility = 'visible';
-                }, 10);
-            });
-            
-            profileDropdown.addEventListener('mouseleave', function() {
-                dropdownTimeout = setTimeout(() => {
-                    dropdownMenu.style.opacity = '0';
-                    dropdownMenu.style.visibility = 'hidden';
-                    setTimeout(() => {
-                        dropdownMenu.style.display = 'none';
-                    }, 200);
-                }, 300);
-            });
-            
-            dropdownMenu.addEventListener('mouseenter', function() {
-                clearTimeout(dropdownTimeout);
-            });
-            
-            dropdownMenu.addEventListener('mouseleave', function() {
-                dropdownTimeout = setTimeout(() => {
-                    dropdownMenu.style.opacity = '0';
-                    dropdownMenu.style.visibility = 'hidden';
-                    setTimeout(() => {
-                        dropdownMenu.style.display = 'none';
-                    }, 200);
-                }, 300);
-            });
+        // Profile dropdown behavior
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+        
+        let dropdownTimeout;
+        
+        profileDropdown.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+            dropdownMenu.style.display = 'block';
         });
-    </script>
+        
+        profileDropdown.addEventListener('mouseleave', function() {
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.display = 'none';
+            }, 300);
+        });
+        
+        dropdownMenu.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+        });
+        
+        dropdownMenu.addEventListener('mouseleave', function() {
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.display = 'none';
+            }, 300);
+        });
+    });
+</script>
 </body>
 </html>

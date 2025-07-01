@@ -141,6 +141,11 @@ if ($modal_type == 'edit' && isset($_GET['id'])) {
     $result = mysqli_query($koneksi, $sql);
     $edit_data = mysqli_fetch_assoc($result);
 }
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 
 <!DOCTYPE html>
@@ -835,7 +840,11 @@ if ($modal_type == 'edit' && isset($_GET['id'])) {
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div>
             
@@ -853,15 +862,6 @@ if ($modal_type == 'edit' && isset($_GET['id'])) {
             <div class="head-title">
                 <div class="left">
                     <h1>Manajemen Kategori</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.html">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Kategori</a>
-                        </li>
-                    </ul>
                 </div>
             </div>
 
@@ -877,9 +877,6 @@ if ($modal_type == 'edit' && isset($_GET['id'])) {
                 <a href="?add=1" class="btn btn-primary">
                     <i class='bx bx-plus'></i> Tambah Kategori
                 </a>
-                <button class="btn btn-outline" id="export-categories-btn">
-                    <i class='bx bx-export'></i> Export
-                </button>
             </div>
 
             <div class="categories-table">

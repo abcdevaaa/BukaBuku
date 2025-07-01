@@ -773,17 +773,7 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
                 <p class="form-note">Format foto harus jpg, jpeg, png dan ukuran file max 2MB.</p>
             </div>
             
-            <!-- <div class="form-group">
-                <label for="password">Kata Sandi Baru (Biarkan kosong jika tidak ingin mengubah)</label>
-                <input type="password" id="password" name="password">
-                <p class="form-note">Minimal 6 karakter.</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="current_password">Kata Sandi Saat Ini (Diperlukan untuk perubahan)</label>
-                <input type="password" id="current_password" name="current_password" required>
-            </div> -->
-            
+           
             <button type="submit" class="btn">Simpan Perubahan</button>
         </form>
     </div>

@@ -15,32 +15,20 @@ $query = "SELECT
           LEFT JOIN metode_pembayaran mp ON p.metode_pembayaran = mp.id_metodePembayaran";
 
 // Get filter values
-$date_range = isset($_GET['date-range']) ? $_GET['date-range'] : 'month';
-$status_filter = isset($_GET['status-filter']) ? $_GET['status-filter'] : 'all';
+$month_filter = isset($_GET['month-filter']) ? $_GET['month-filter'] : date('m');
+$year_filter = isset($_GET['year-filter']) ? $_GET['year-filter'] : date('Y');
 
 // Build WHERE conditions array
 $where_conditions = [];
 
-// Add status filter if not 'all'
-if ($status_filter != 'all') {
-    $where_conditions[] = "p.status = '$status_filter'";
+// Add month filter
+if ($month_filter != 'all') {
+    $where_conditions[] = "MONTH(p.tanggal_pesanan) = '$month_filter'";
 }
 
-// Add date range filter
-$current_date = date('Y-m-d');
-switch ($date_range) {
-    case 'today':
-        $where_conditions[] = "DATE(p.tanggal_pesanan) = '$current_date'";
-        break;
-    case 'week':
-        $where_conditions[] = "p.tanggal_pesanan >= DATE_SUB('$current_date', INTERVAL 1 WEEK)";
-        break;
-    case 'month':
-        $where_conditions[] = "MONTH(p.tanggal_pesanan) = MONTH('$current_date') AND YEAR(p.tanggal_pesanan) = YEAR('$current_date')";
-        break;
-    case 'year':
-        $where_conditions[] = "YEAR(p.tanggal_pesanan) = YEAR('$current_date')";
-        break;
+// Add year filter
+if ($year_filter != 'all') {
+    $where_conditions[] = "YEAR(p.tanggal_pesanan) = '$year_filter'";
 }
 
 // Combine WHERE conditions if any exist
@@ -56,6 +44,21 @@ $result = mysqli_query($koneksi, $query);
 if (!$result) {
     die('Query error: ' . mysqli_error($koneksi));
 }
+
+// Query untuk menghitung total
+$total_query = "SELECT 
+                COUNT(CASE WHEN p.status != 'pesanan dibatalkan' THEN 1 ELSE NULL END) as total_orders,
+                SUM(CASE WHEN p.status != 'pesanan dibatalkan' THEN p.total_belanja ELSE 0 END) as total_revenue,
+                COUNT(CASE WHEN p.status = 'pesanan dibatalkan' THEN 1 ELSE NULL END) as canceled_orders
+                FROM pesanan p";
+                
+// Tambahkan kondisi WHERE yang sama dengan query utama
+if (!empty($where_conditions)) {
+    $total_query .= " WHERE " . implode(" AND ", $where_conditions);
+}
+
+$total_result = mysqli_query($koneksi, $total_query);
+$total_data = mysqli_fetch_assoc($total_result);
 
 // Query for all orders (for modals)
 $all_orders_query = "SELECT 
@@ -105,6 +108,19 @@ $all_items = [];
 while ($item = mysqli_fetch_assoc($items_result)) {
     $all_items[$item['id_pesanan']][] = $item;
 }
+
+// Get distinct years for filter
+$years_query = "SELECT DISTINCT YEAR(tanggal_pesanan) as year FROM pesanan ORDER BY year DESC";
+$years_result = mysqli_query($koneksi, $years_query);
+$years = [];
+while ($row = mysqli_fetch_assoc($years_result)) {
+    $years[] = $row['year'];
+}
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 
 <!DOCTYPE html>
@@ -551,13 +567,35 @@ while ($item = mysqli_fetch_assoc($items_result)) {
             background: var(--grey);
             border-radius: 6px;
             font-family: var(--lato);
-            /* transition: border 0.3s ease; */
         }
 
         .btn-primary:hover {
-            /* outline: none; */
             background: var(--purple);
             color: #fff;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            flex: 1;
+            background: var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .summary-card h3 {
+            font-size: 16px;
+            color: var(--dark-grey);
+            margin-bottom: 10px;
+        }
+        .summary-card p {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--purple);
         }
 
         /* Sales Table */
@@ -625,7 +663,7 @@ while ($item = mysqli_fetch_assoc($items_result)) {
         .btn-icon.edit {
             background: rgba(255, 206, 38, 0.2);
             color: var(--yellow);
-            border: 1px solid rgba(255, 255, 255, 0.5); /* Added white border */
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
         .btn-icon.edit:hover {
             background: rgba(255, 206, 38, 0.3);
@@ -798,7 +836,9 @@ while ($item = mysqli_fetch_assoc($items_result)) {
             .filter-group {
                 width: 100%;
             }
-            
+            .summary-cards {
+                flex-direction: column;
+            }
         }
 
         @media screen and (max-width: 576px) {
@@ -808,6 +848,81 @@ while ($item = mysqli_fetch_assoc($items_result)) {
             .modal-content {
                 width: 95%;
                 padding: 16px;
+            }
+        }
+
+        .head-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            grid-gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .head-title .left {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .head-title .right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: var(--lato);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--purple);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #7a2d70;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn i {
+            font-size: 1.1rem;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #content, #content * {
+                visibility: visible;
+            }
+            #content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            nav, #sidebar, .filter-section, .head-title, .summary-cards, .modal {
+                display: none !important;
+            }
+            .sales-table {
+                width: 100% !important;
+                margin-top: 0;
+            }
+            .print-header, .print-footer {
+                display: block !important;
             }
         }
     </style>
@@ -879,7 +994,11 @@ while ($item = mysqli_fetch_assoc($items_result)) {
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div> 
             
@@ -896,15 +1015,12 @@ while ($item = mysqli_fetch_assoc($items_result)) {
             <div class="head-title">
                 <div class="left">
                     <h1>Laporan Penjualan</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.php">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Laporan</a>
-                        </li>
-                    </ul>
+                </div>
+
+                <div class="right">
+                    <button onclick="printReport()" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 5px;">
+                        <i class='bx bx-printer'></i> Cetak Laporan
+                    </button>
                 </div>
             </div>
 
@@ -922,23 +1038,30 @@ while ($item = mysqli_fetch_assoc($items_result)) {
                 <form method="GET" action="">
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label for="date-range">Rentang Tanggal</label>
-                            <select id="date-range" name="date-range" class="filter-control">
-                                <option value="month" <?php echo $date_range == 'month' ? 'selected' : ''; ?>>Bulan Ini</option>
-                                <option value="week" <?php echo $date_range == 'week' ? 'selected' : ''; ?>>Minggu Ini</option>
-                                <option value="today" <?php echo $date_range == 'today' ? 'selected' : ''; ?>>Hari Ini</option>
-                                <option value="year" <?php echo $date_range == 'year' ? 'selected' : ''; ?>>Tahun Ini</option>
+                            <label for="month-filter">Bulan</label>
+                            <select id="month-filter" name="month-filter" class="filter-control">
+                                <option value="all" <?php echo $month_filter == 'all' ? 'selected' : ''; ?>>Semua Bulan</option>
+                                <option value="01" <?php echo $month_filter == '01' ? 'selected' : ''; ?>>Januari</option>
+                                <option value="02" <?php echo $month_filter == '02' ? 'selected' : ''; ?>>Februari</option>
+                                <option value="03" <?php echo $month_filter == '03' ? 'selected' : ''; ?>>Maret</option>
+                                <option value="04" <?php echo $month_filter == '04' ? 'selected' : ''; ?>>April</option>
+                                <option value="05" <?php echo $month_filter == '05' ? 'selected' : ''; ?>>Mei</option>
+                                <option value="06" <?php echo $month_filter == '06' ? 'selected' : ''; ?>>Juni</option>
+                                <option value="07" <?php echo $month_filter == '07' ? 'selected' : ''; ?>>Juli</option>
+                                <option value="08" <?php echo $month_filter == '08' ? 'selected' : ''; ?>>Agustus</option>
+                                <option value="09" <?php echo $month_filter == '09' ? 'selected' : ''; ?>>September</option>
+                                <option value="10" <?php echo $month_filter == '10' ? 'selected' : ''; ?>>Oktober</option>
+                                <option value="11" <?php echo $month_filter == '11' ? 'selected' : ''; ?>>November</option>
+                                <option value="12" <?php echo $month_filter == '12' ? 'selected' : ''; ?>>Desember</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="status-filter">Status</label>
-                            <select id="status-filter" name="status-filter" class="filter-control">
-                                <option value="all" <?php echo $status_filter == 'all' ? 'selected' : ''; ?>>Semua Status</option>
-                                <option value="pesanan diterima" <?php echo $status_filter == 'pesanan diterima' ? 'selected' : ''; ?>>Selesai</option>
-                                <option value="menunggu pembayaran" <?php echo $status_filter == 'menunggu pembayaran' ? 'selected' : ''; ?>>Pending</option>
-                                <option value="pesanan diproses" <?php echo $status_filter == 'pesanan diproses' ? 'selected' : ''; ?>>Diproses</option>
-                                <option value="pesanan dikirim" <?php echo $status_filter == 'pesanan dikirim' ? 'selected' : ''; ?>>Dikirim</option>
-                                <option value="pesanan dibatalkan" <?php echo $status_filter == 'pesanan dibatalkan' ? 'selected' : ''; ?>>Dibatalkan</option>
+                            <label for="year-filter">Tahun</label>
+                            <select id="year-filter" name="year-filter" class="filter-control">
+                                <option value="all" <?php echo $year_filter == 'all' ? 'selected' : ''; ?>>Semua Tahun</option>
+                                <?php foreach ($years as $year): ?>
+                                    <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>><?php echo $year; ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -950,6 +1073,22 @@ while ($item = mysqli_fetch_assoc($items_result)) {
                 </form>
             </div>
 
+            <!-- Total Summary -->
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <h3>Total Pesanan</h3>
+                    <p><?php echo $total_data['total_orders']; ?></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Pesanan Dibatalkan</h3>
+                    <p><?php echo $total_data['canceled_orders']; ?></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Total Pendapatan</h3>
+                    <p>Rp <?php echo number_format($total_data['total_revenue'], 0, ',', '.'); ?></p>
+                </div>
+            </div>
+                                    
             <!-- Sales Table -->
             <div class="sales-table">
                 <table>
@@ -1239,6 +1378,134 @@ while ($item = mysqli_fetch_assoc($items_result)) {
                 }
             });
         });
+        
+
+        // Fungsi untuk mencetak laporan utama
+        function printReport() {
+            // Clone elemen yang ingin dicetak
+            const printContent = document.querySelector('.sales-table').cloneNode(true);
+            
+            // Buat elemen header untuk cetakan
+            const printHeader = document.createElement('div');
+            printHeader.className = 'print-header';
+            printHeader.innerHTML = `
+                <h2>Laporan Penjualan Toko BukaBuku</h2>
+                <p>Periode: ${getSelectedMonth()} ${getSelectedYear()}</p>
+                <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                <hr>
+            `;
+            
+            // Buat elemen footer untuk cetakan
+            const printFooter = document.createElement('div');
+            printFooter.className = 'print-footer';
+            printFooter.innerHTML = `
+                <hr>
+                <p>Dicetak oleh: <?php echo $_SESSION['username'] ?? 'Admin'; ?></p>
+            `;
+
+            // Buka window baru untuk cetak
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Laporan Penjualan - ${getSelectedMonth()} ${getSelectedYear()}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .print-header { text-align: center; margin-bottom: 20px; }
+                        .print-footer { text-align: right; margin-top: 20px; font-size: 12px; }
+                        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        hr { border: 0.5px solid #eee; }
+                        .status { 
+                            display: inline-block; 
+                            padding: 3px 8px; 
+                            border-radius: 3px; 
+                            font-size: 12px; 
+                            font-weight: bold; 
+                        }
+                        .status.completed { background: #d4edda; color: #155724; }
+                        .status.pending { background: #fff3cd; color: #856404; }
+                        .status.canceled { background: #f8d7da; color: #721c24; }
+                        .status.processing { background: #cce5ff; color: #004085; }
+                    </style>
+                </head>
+                <body>
+                    ${printHeader.outerHTML}
+                    ${printContent.outerHTML}
+                    ${printFooter.outerHTML}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            
+            // Fokus ke window cetak dan jalankan print
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        }
+
+        // Fungsi pembantu untuk mendapatkan bulan terpilih
+        function getSelectedMonth() {
+            const monthSelect = document.getElementById('month-filter');
+            const selectedMonth = monthSelect.options[monthSelect.selectedIndex].text;
+            return monthSelect.value === 'all' ? 'Semua Bulan' : selectedMonth;
+        }
+
+        // Fungsi pembantu untuk mendapatkan tahun terpilih
+        function getSelectedYear() {
+            const yearSelect = document.getElementById('year-filter');
+            return yearSelect.value === 'all' ? '' : yearSelect.value;
+        }
+
+
+        // Fungsi untuk mencetak detail pesanan
+        function printOrderDetail(orderId) {
+            const modalContent = document.querySelector(`#order-details-${orderId} .modal-content`).cloneNode(true);
+            
+            // Hapus tombol aksi yang tidak perlu di cetak
+            const modalFooter = modalContent.querySelector('.modal-footer');
+            if (modalFooter) modalFooter.remove();
+            
+            // Buat window baru untuk cetak
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Detail Pesanan #ORD-${orderId.toString().padStart(4, '0')}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h3 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                        .order-details { margin-bottom: 20px; }
+                        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                        .summary-row.total { font-weight: bold; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        .status { 
+                            display: inline-block; 
+                            padding: 3px 8px; 
+                            border-radius: 3px; 
+                            font-size: 12px; 
+                            font-weight: bold; 
+                        }
+                        .print-footer { text-align: right; margin-top: 20px; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    ${modalContent.innerHTML}
+                    <div class="print-footer">
+                        Dicetak pada: ${new Date().toLocaleString('id-ID')}
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        }
     </script>
 </body>
 </html>

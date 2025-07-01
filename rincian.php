@@ -66,6 +66,7 @@ switch(strtolower($pesanan['status'])) {
     default:
         $statusClass = 'status-diproses';
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -356,7 +357,7 @@ switch(strtolower($pesanan['status'])) {
         
         .address-name {
             /* font-weight: bold; */
-            font-size: 13px; /* nama */
+            font-size: 15px; /* nama */
             margin-bottom: 5px;
             color: #666;
         }
@@ -364,7 +365,7 @@ switch(strtolower($pesanan['status'])) {
         .address-details {
             color: #666;
             line-height: 1.5;
-            font-size: 12px; /* alamat  */
+            font-size: 15px; /* alamat  */
         }
         
         /* Status Styles */
@@ -646,6 +647,24 @@ switch(strtolower($pesanan['status'])) {
         .social-icons a:hover {
             color: var(--purple);
         }
+
+        /* Button Styles */
+        .confirm-btn {
+            background-color: var(--purple);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            border: none;
+            margin-top: 15px;
+            display: inline-block;
+        }
+
+        .confirm-btn:hover {
+            background-color: #5a2d6e;
+            transform: translateY(-2px);
+        }
     </style>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -727,26 +746,6 @@ switch(strtolower($pesanan['status'])) {
         
         <!-- Status Pengiriman -->
         <div class="section">
-            <!-- <div class="status-progress">
-                <div class="progress-steps">
-                    <div class="step <?= strtolower($pesanan['status']) == 'menunggu pembayaran' ? 'active' : '' ?>">
-                        <div class="step-icon">1</div>
-                        <div class="step-label">Menunggu Pembayaran</div>
-                    </div>
-                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan diproses' ? 'active' : '' ?>">
-                        <div class="step-icon">2</div>
-                        <div class="step-label">Pesanan Diproses</div>
-                    </div>
-                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan dikirim' ? 'active' : '' ?>">
-                        <div class="step-icon">3</div>
-                        <div class="step-label">Pesanan Dikirim</div>
-                    </div>
-                    <div class="step <?= strtolower($pesanan['status']) == 'pesanan diterima' ? 'active' : '' ?>">
-                        <div class="step-icon">4</div>
-                        <div class="step-label">Pesanan Diterima</div>
-                    </div>
-                </div>
-            </div> -->
             
             <span class="status <?= $statusClass ?>"><?= ucfirst($pesanan['status']) ?></span>
             <!-- <p>Pesanan tiba di alamat tujuan. diterima oleh Yang bersangkutan.<br>
@@ -793,6 +792,16 @@ switch(strtolower($pesanan['status'])) {
                 <?= $pesanan['metode_pembayaran_nama'] ?>
             </div>
         </div>
+
+        <!-- Button Konfirmasi Pesanan Diterima -->
+        <?php if (strtolower($pesanan['status']) == 'pesanan dikirim'): ?>
+        <div class="section" style="text-align: center;">
+            <form action="konfirmasi_pesanan.php" method="post">
+                <input type="hidden" name="id_pesanan" value="<?= $id_pesanan ?>">
+                <button type="submit" class="confirm-btn">Konfirmasi Pesanan Diterima</button>
+            </form>
+        </div>
+        <?php endif; ?>
     </div>
             
     <!-- Footer -->
@@ -845,5 +854,51 @@ switch(strtolower($pesanan['status'])) {
             </div>
         </div>
     </footer>
+    <script>
+        // JavaScript to handle the dropdown behavior
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        const dropdownMenu = document.querySelector('.profile-dropdown-menu');
+        
+        // Keep dropdown open when moving between icon and menu
+        let dropdownTimeout;
+        
+        profileDropdown.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+            dropdownMenu.style.display = 'block';
+            setTimeout(() => {
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+            }, 10);
+        });
+        
+        
+
+        profileDropdown.addEventListener('mouseleave', function() {
+            // Start timeout when leaving the dropdown area
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300); // 300ms delay before closing
+        });
+        
+        dropdownMenu.addEventListener('mouseenter', function() {
+            clearTimeout(dropdownTimeout);
+        });
+        
+        dropdownMenu.addEventListener('mouseleave', function() {
+            dropdownTimeout = setTimeout(() => {
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 200);
+            }, 300);
+        });
+    });
+    </script>
 </body>
 </html>

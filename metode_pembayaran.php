@@ -3,37 +3,110 @@ session_start();
 include 'koneksi.php';
 
 if (!isset($_SESSION['id_users'])) {
-    header("Location: login.php");
+    header("Location: LoginRegister.php");
     exit();
 }
 
-// Ambil data dari form checkout
-$id_buku = (int)$_POST['id_buku'];
-$jumlah = (int)$_POST['jumlah'];
-$metode_pengiriman = (int)$_POST['metode_pengiriman'];
-$total_harga = (int)$_POST['total_harga'];
+// Initialize variables
+$id_buku = 0;
+$jumlah = 1;
+$total_harga = 0;
+$from_cart = false;
+$total_quantity = 0;
 
-// Query data buku
-$query_buku = "SELECT * FROM buku WHERE id_buku = $id_buku";
-$result_buku = mysqli_query($koneksi, $query_buku);
+// Check if this is from cart or direct purchase
+if (isset($_POST['from_cart']) && $_POST['from_cart'] == 1) {
+    // Cart purchase
+    $from_cart = true;
+    
+    if (!isset($_POST['selected_items']) || !is_array($_POST['selected_items'])) {
+        die("Item keranjang tidak valid.");
+    }
+    
+    $selected_items = array_map('intval', $_POST['selected_items']);
+    $total_harga = isset($_POST['total_harga']) ? (int)$_POST['total_harga'] : 0;
+    
+    // Store cart items in session with quantities
+    $_SESSION['cart_checkout_items'] = [];
+    foreach ($selected_items as $id_buku) {
+        // Get quantity from POST data or session (adjust according to your cart implementation)
+        $item_qty = isset($_POST['keranjang'][$id_buku]['jumlah']) ? (int)$_POST['keranjang'][$id_buku]['jumlah'] : 1;
+        $_SESSION['cart_checkout_items'][$id_buku] = [
+            'id' => $id_buku,
+            'quantity' => $item_qty
+        ];
+        $total_quantity += $item_qty;
+    }
+    
+    // Use first item for display purposes
+    $id_buku = $selected_items[0] ?? 0;
+} else {
+    // Direct purchase
+    $id_buku = isset($_POST['id_buku']) ? (int)$_POST['id_buku'] : 0;
+    $jumlah = isset($_POST['jumlah']) ? (int)$_POST['jumlah'] : 1;
+    $total_harga = isset($_POST['total_harga']) ? (int)$_POST['total_harga'] : 0;
+    $total_quantity = $jumlah;
+}
+
+// Validate inputs
+if ($id_buku <= 0) {
+    die("Buku tidak valid.");
+}
+
+if ($total_harga <= 0) {
+    die("Total harga tidak valid.");
+}
+
+$metode_pengiriman = isset($_POST['metode_pengiriman']) ? (int)$_POST['metode_pengiriman'] : 0;
+
+// Query book data (for display purposes)
+$query_buku = "SELECT * FROM buku WHERE id_buku = ?";
+$stmt = mysqli_prepare($koneksi, $query_buku);
+mysqli_stmt_bind_param($stmt, "i", $id_buku);
+mysqli_stmt_execute($stmt);
+$result_buku = mysqli_stmt_get_result($stmt);
+
+if (!$result_buku || mysqli_num_rows($result_buku) == 0) {
+    die("Buku tidak ditemukan.");
+}
+
 $buku = mysqli_fetch_assoc($result_buku);
 
-// Query alamat pengguna
+// Query user address
 $id_users = $_SESSION['id_users'];
-$query_alamat = "SELECT * FROM alamat WHERE id_users = $id_users";
-$result_alamat = mysqli_query($koneksi, $query_alamat);
+$query_alamat = "SELECT * FROM alamat WHERE id_users = ?";
+$stmt = mysqli_prepare($koneksi, $query_alamat);
+mysqli_stmt_bind_param($stmt, "i", $id_users);
+mysqli_stmt_execute($stmt);
+$result_alamat = mysqli_stmt_get_result($stmt);
+
+if (!$result_alamat || mysqli_num_rows($result_alamat) == 0) {
+    die("Alamat pengiriman tidak ditemukan.");
+}
+
 $alamat = mysqli_fetch_assoc($result_alamat);
 
-// Query metode pengiriman yang dipilih
-$query_pengiriman = "SELECT * FROM metode_pengiriman WHERE id_metodePengiriman = $metode_pengiriman";
-$result_pengiriman = mysqli_query($koneksi, $query_pengiriman);
+// Query shipping method
+$query_pengiriman = "SELECT * FROM metode_pengiriman WHERE id_metodePengiriman = ?";
+$stmt = mysqli_prepare($koneksi, $query_pengiriman);
+mysqli_stmt_bind_param($stmt, "i", $metode_pengiriman);
+mysqli_stmt_execute($stmt);
+$result_pengiriman = mysqli_stmt_get_result($stmt);
+
+if (!$result_pengiriman || mysqli_num_rows($result_pengiriman) == 0) {
+    die("Metode pengiriman tidak valid.");
+}
+
 $pengiriman = mysqli_fetch_assoc($result_pengiriman);
 
-// Query semua metode pembayaran
+// Query payment methods
 $query_metode_pembayaran = "SELECT * FROM metode_pembayaran";
 $result_metode_pembayaran = mysqli_query($koneksi, $query_metode_pembayaran);
 
-// Hitung total belanja
+if (!$result_metode_pembayaran) {
+    die("Gagal mengambil metode pembayaran.");
+}
+
 $total_belanja = $total_harga + $pengiriman['biaya'];
 ?>
 
@@ -321,12 +394,21 @@ $total_belanja = $total_harga + $pengiriman['biaya'];
             <!-- Container Kiri -->
             <div class="left-container">
                 <form action="proses_pembayaran.php" method="POST">
-                    <input type="hidden" name="id_buku" value="<?php echo $id_buku; ?>">
-                    <input type="hidden" name="jumlah" value="<?php echo $jumlah; ?>">
-                    <input type="hidden" name="metode_pengiriman" value="<?php echo $metode_pengiriman; ?>">
-                    <input type="hidden" name="total_harga" value="<?php echo $total_harga; ?>">
-                    <input type="hidden" name="biaya_pengiriman" value="<?php echo $pengiriman['biaya']; ?>">
-                    <input type="hidden" name="total_belanja" value="<?php echo $total_belanja; ?>">
+                    <?php if ($from_cart): ?>
+                        <input type="hidden" name="from_cart" value="1">
+                        <input type="hidden" name="total_harga" value="<?php echo $total_harga; ?>">
+                        <input type="hidden" name="metode_pengiriman" value="<?php echo $metode_pengiriman; ?>">
+                        <?php foreach ($selected_items as $id_buku): ?>
+                            <input type="hidden" name="selected_items[]" value="<?php echo $id_buku; ?>">
+                            <input type="hidden" name="keranjang[<?php echo $id_buku; ?>][jumlah]" 
+                                value="<?php echo $_POST['keranjang'][$id_buku]['jumlah']; ?>">
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <input type="hidden" name="id_buku" value="<?php echo $id_buku; ?>">
+                        <input type="hidden" name="jumlah" value="<?php echo $jumlah; ?>">
+                        <input type="hidden" name="total_harga" value="<?php echo $total_harga; ?>">
+                        <input type="hidden" name="metode_pengiriman" value="<?php echo $metode_pengiriman; ?>">
+                    <?php endif; ?>
                     
                     <div class="payment-method">
                         <h3 class="method-title">E-Wallet</h3>
@@ -367,7 +449,7 @@ $total_belanja = $total_harga + $pengiriman['biaya'];
                 <h2 class="method-title">Ringkasan Pembayaran</h2>
                 
                 <div class="summary-item">
-                    <span class="summary-label">Total Harga (<?php echo $jumlah; ?> Barang)</span>
+                    <span class="summary-label">Total Harga </span>
                     <span class="summary-value">Rp<?php echo number_format($total_harga, 0, ',', '.'); ?></span>
                 </div>
                 

@@ -2,11 +2,14 @@
 session_start();
 include 'koneksi.php';
 
-// if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'user') {
-//     header("Location: LoginRegister.php");
-//     exit();
-// }
-
+if (isset($_SESSION['role'])) {
+    if ($_SESSION['role'] !== 'user') {
+        session_unset();
+        session_destroy();
+        header("Location: LoginRegister.php");
+        exit();
+    }
+}
 $email = isset($_SESSION['email']);
 $username = isset($_SESSION['username']);
 
@@ -776,8 +779,6 @@ $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
             }, 10);
         });
         
-        
-
         profileDropdown.addEventListener('mouseleave', function() {
             // Start timeout when leaving the dropdown area
             dropdownTimeout = setTimeout(() => {

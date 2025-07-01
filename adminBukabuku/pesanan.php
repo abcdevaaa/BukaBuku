@@ -47,6 +47,11 @@ if ($customer_filter) {
 }
 
 $result = mysqli_query($koneksi, $query);
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 
 <!DOCTYPE html>
@@ -285,27 +290,7 @@ $result = mysqli_query($koneksi, $query);
         #content nav .nav-link:hover {
             color: var(--purple);
         }
-        #content nav .notification {
-            font-size: 20px;
-            position: relative;
-            cursor: pointer;
-        }
-        #content nav .notification .num {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid var(--light);
-            background: var(--red);
-            color: var(--light);
-            font-weight: 700;
-            font-size: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+        
         #content nav .profile {
             cursor: pointer;
             position: relative;
@@ -885,7 +870,11 @@ $result = mysqli_query($koneksi, $query);
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div> 
             
@@ -902,15 +891,7 @@ $result = mysqli_query($koneksi, $query);
             <div class="head-title">
                 <div class="left">
                     <h1>Manajemen Pesanan</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.html">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Pesanan</a>
-                        </li>
-                    </ul>
+                    
                 </div>
             </div>
 

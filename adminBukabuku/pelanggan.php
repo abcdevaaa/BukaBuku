@@ -55,6 +55,11 @@ if (isset($_GET['delete_id'])) {
     header("Location: pelanggan.php?deleted=true");
     exit();
 }
+
+$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
+$result_admin = mysqli_query($koneksi, $query_admin);
+$admin = mysqli_fetch_assoc($result_admin);
 ?>
 
 <!DOCTYPE html>
@@ -267,6 +272,43 @@ if (isset($_GET['delete_id'])) {
             cursor: pointer;
             color: var(--dark);
             font-size: 1.5rem;
+        }
+
+        #content nav .profile {
+            cursor: pointer;
+            position: relative;
+        }
+        #content nav .profile img {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        #content nav .switch-mode {
+            display: block;
+            min-width: 50px;
+            height: 25px;
+            border-radius: 25px;
+            background: var(--grey);
+            cursor: pointer;
+            position: relative;
+        }
+        #content nav .switch-mode::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            bottom: 2px;
+            width: calc(25px - 4px);
+            background: var(--purple);
+            border-radius: 50%;
+            transition: all .3s ease;
+        }
+        #content nav #switch-mode:checked + .switch-mode::before {
+            left: calc(100% - (25px - 4px) - 2px);
+        }
+        #content nav #switch-mode {
+            display: none;
         }
 
         /* Profile dropdown */
@@ -636,7 +678,11 @@ if (isset($_GET['delete_id'])) {
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div>
             
@@ -654,15 +700,7 @@ if (isset($_GET['delete_id'])) {
             <div class="head-title">
                 <div class="left">
                     <h1>Manajemen Pelanggan</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.html">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Pelanggan</a>
-                        </li>
-                    </ul>
+                    
                 </div>
             </div>
 
@@ -804,46 +842,7 @@ if (isset($_GET['delete_id'])) {
             }
         });
 
-        // View customer details
-        // function viewCustomerDetail(id) {
-        //     // Hide all detail content first
-        //     document.querySelectorAll('.customer-detail-content').forEach(content => {
-        //         content.style.display = 'none';
-        //     });
-            
-        //     // Show selected detail
-        //     const detailContent = document.getElementById(`detail-customer-${id}`);
-        //     if (detailContent) {
-        //         detailContent.style.display = 'block';
-        //     }
-            
-        //     document.getElementById('detail-modal').classList.add('show');
-        // }
-
-        // // Show delete confirmation modal
-        // function showDeleteModal(id, name) {
-        //     document.getElementById('delete-message').textContent = 
-        //         `Apakah Anda yakin ingin menghapus pelanggan "${name}"? Semua data terkait akan dihapus permanen.`;
-        //     document.getElementById('delete-modal').classList.add('show');
-        // }
-
-        // // Close modal function
-        // function closeModal(modalId) {
-        //     document.getElementById(modalId).classList.remove('show');
-        // }
-
-        // // Confirm delete button click
-        // document.getElementById('confirm-delete-btn').addEventListener('click', () => {
-        //     alert('Pelanggan berhasil dihapus');
-        //     closeModal('delete-modal');
-        // });
-
-        // // Close modals when clicking outside
-        // window.addEventListener('click', (event) => {
-        //     if(event.target.classList.contains('modal')) {
-        //         closeModal(event.target.id);
-        //     }
-        // });
+        
     </script>
 </body>
 </html>

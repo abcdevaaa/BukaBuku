@@ -3,13 +3,82 @@ session_start();
 include ('../koneksi.php');
 
 if (!isset($_SESSION['username'])) {
-    header("Location: LoginRegister.php");
+    header("Location: ../LoginRegister.php");
     exit();
 }
 
 $username = $_SESSION['username'];
 $query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username'");
 $admin = mysqli_fetch_assoc($query);
+
+// Handle form submissions
+$message = '';
+$message_type = '';
+
+// Update Profile
+if (isset($_POST['update_profile'])) {
+    $name = mysqli_real_escape_string($koneksi, $_POST['name']);
+    $email = mysqli_real_escape_string($koneksi, $_POST['email']);
+    
+    $update_query = "UPDATE users SET username = '$name', email = '$email' WHERE username = '$username'";
+    if (mysqli_query($koneksi, $update_query)) {
+        $_SESSION['username'] = $name;
+        $message = 'Profil berhasil diperbarui';
+        $message_type = 'success';
+        
+        // Refresh admin data
+        $query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$name'");
+        $admin = mysqli_fetch_assoc($query);
+    } else {
+        $message = 'Gagal memperbarui profil: ' . mysqli_error($koneksi);
+        $message_type = 'danger';
+    }
+}
+
+// Di bagian change avatar handler (sekitar line 87)
+if (!empty($_FILES['avatar_upload']['name'])) {
+    $target_dir = __DIR__ . "/image/";
+    
+    // Pastikan direktori ada
+    if (!file_exists($target_dir)) {
+        mkdir($target_dir, 0755, true);
+    }
+    
+    // Generate unique filename
+    $imageFileType = strtolower(pathinfo($_FILES["avatar_upload"]["name"], PATHINFO_EXTENSION));
+    $new_filename = uniqid() . '.' . $imageFileType;
+    $target_path = $target_dir . $new_filename;
+    
+    // Check if image file is a actual image
+    $check = getimagesize($_FILES["avatar_upload"]["tmp_name"]);
+    if ($check !== false) {
+        if (move_uploaded_file($_FILES["avatar_upload"]["tmp_name"], $target_path)) {
+            // Delete old avatar if exists
+            if (!empty($admin['profil']) && file_exists($target_dir . $admin['profil'])) {
+                unlink($target_dir . $admin['profil']);
+            }
+            
+            $update_query = "UPDATE users SET profil = '$new_filename' WHERE username = '$username'";
+            if (mysqli_query($koneksi, $update_query)) {
+                $message = 'Foto profil berhasil diubah';
+                $message_type = 'success';
+                
+                // Refresh admin data
+                $query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username'");
+                $admin = mysqli_fetch_assoc($query);
+            } else {
+                $message = 'Gagal menyimpan informasi foto profil: ' . mysqli_error($koneksi);
+                $message_type = 'danger';
+            }
+        } else {
+            $message = 'Gagal mengunggah file. Pastikan direktori image memiliki izin tulis.';
+            $message_type = 'danger';
+        }
+    } else {
+        $message = 'File bukan gambar yang valid';
+        $message_type = 'danger';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -21,7 +90,7 @@ $admin = mysqli_fetch_assoc($query);
     <!-- Boxicons -->
     <link href='https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap');
+         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap');
 
         * {
             margin: 0;
@@ -733,6 +802,12 @@ $admin = mysqli_fetch_assoc($query);
                 </a>
             </li>
             <li>
+                <a href="laporan.php">
+                    <i class='bx bxs-doughnut-chart'></i>
+                    <span class="text">Laporan</span>
+                </a>
+            </li>
+            <li>
                 <a href="pelanggan.php">
                     <i class='bx bxs-group'></i>
                     <span class="text">Pelanggan</span>
@@ -762,7 +837,11 @@ $admin = mysqli_fetch_assoc($query);
                 <input type="checkbox" id="switch-mode" hidden>
                 <label for="switch-mode" class="switch-mode"></label>
                 <a href="#" class="profile" id="profile-btn">
-                    <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php if (!empty($admin['profil'])) : ?>
+                        <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Profile Image">
+                    <?php else : ?>
+                        <img src="image/profile-picture.jpg" alt="Profile Image">
+                    <?php endif; ?>
                 </a>
             </div>
               
@@ -779,34 +858,33 @@ $admin = mysqli_fetch_assoc($query);
             <div class="head-title">
                 <div class="left">
                     <h1>Profil Saya</h1>
-                    <ul class="breadcrumb">
-                        <li>
-                            <a href="dashboard.php">Dashboard</a>
-                        </li>
-                        <li><i class='bx bx-chevron-right'></i></li>
-                        <li>
-                            <a class="active" href="#">Profil Saya</a>
-                        </li>
-                    </ul>
                 </div>
             </div>
 
             <!-- Alert Message -->
-            <!-- <div class="alert alert-success" role="alert">
-                <i class="bx bx-check-circle"></i>
-                <span>Profil berhasil diperbarui</span>
-            </div> -->
+            <?php if (!empty($message)) : ?>
+                <div class="alert alert-<?= $message_type ?>" role="alert">
+                    <i class="bx bx-<?= $message_type === 'success' ? 'check-circle' : 'error-circle' ?>"></i>
+                    <span><?= htmlspecialchars($message) ?></span>
+                </div>
+            <?php endif; ?>
 
             <!-- Profile Section -->
             <div class="profile-section">
                 <div class="profile-header">
-                    <?php if (!empty($admin['profil'])) : ?>
-                    <img src="image/<?= $admin['profil'] ?>" alt="Foto Profil">
-                <?php else: ?>
-                    <div class="profile-pic-placeholder">
-                        <i class="ri-user-fill" style="font-size: 3rem; color: #666;"></i>
+                    <div class="profile-avatar-container">
+                        <?php if (!empty($admin['profil'])) : ?>
+                            <?php if (filter_var($admin['profil'], FILTER_VALIDATE_URL)) : ?>
+                                <img src="<?= htmlspecialchars($admin['profil']) ?>" alt="Foto Profil" class="profile-avatar">
+                            <?php else : ?>
+                                <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Foto Profil" class="profile-avatar">
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <div class="profile-avatar" style="background-color: var(--light-purple); display: flex; align-items: center; justify-content: center;">
+                                <i class='bx bx-user' style="font-size: 3rem; color: var(--purple);"></i>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
                     <div class="profile-info">
                         <h2><?= htmlspecialchars($admin['username']) ?></h2>
                         <p><?= htmlspecialchars($admin['email']) ?></p>
@@ -832,9 +910,6 @@ $admin = mysqli_fetch_assoc($query);
                             <button class="btn btn-primary" onclick="document.getElementById('edit-profile-modal').style.display='flex'">
                                 <i class='bx bx-edit'></i> Edit Profil
                             </button>
-                            <button class="btn btn-primary" onclick="document.getElementById('change-password-modal').style.display='flex'">
-                                <i class='bx bx-key'></i> Ubah Password
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -847,7 +922,7 @@ $admin = mysqli_fetch_assoc($query);
     <!-- Edit Profile Modal -->
     <div class="modal" id="edit-profile-modal" role="dialog" aria-labelledby="edit-profile-title" style="display: none;">
         <div class="modal-content">
-            <form method="POST" action="profile.php">
+            <form method="POST" action="profilA.php">
                 <div class="modal-header">
                     <h3 id="edit-profile-title">Edit Profil</h3>
                     <span class="close" onclick="document.getElementById('edit-profile-modal').style.display='none'" aria-label="Close modal">&times;</span>
@@ -855,11 +930,11 @@ $admin = mysqli_fetch_assoc($query);
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="profile-name">Nama Lengkap</label>
-                        <input type="text" name="name" id="profile-name-input" class="form-control" value="Admin Toko Buku" required>
+                        <input type="text" name="name" id="profile-name-input" class="form-control" value="<?= htmlspecialchars($admin['username']) ?>" required>
                     </div>
                     <div class="form-group">
                         <label for="profile-email">Email</label>
-                        <input type="email" name="email" id="profile-email-input" class="form-control" value="admin@tokobuku.com" required>
+                        <input type="email" name="email" id="profile-email-input" class="form-control" value="<?= htmlspecialchars($admin['email']) ?>" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -870,79 +945,33 @@ $admin = mysqli_fetch_assoc($query);
         </div>
     </div>
 
-    <!-- Change Password Modal -->
-    <div class="modal" id="change-password-modal" role="dialog" aria-labelledby="change-password-title" style="display: none;">
-        <div class="modal-content">
-            <form method="POST" action="profile.php">
-                <div class="modal-header">
-                    <h3 id="change-password-title">Ubah Password</h3>
-                    <span class="close" onclick="document.getElementById('change-password-modal').style.display='none'" aria-label="Close modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="current-password">Password Saat Ini</label>
-                        <input type="password" name="current_password" id="current-password" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-password">Password Baru</label>
-                        <input type="password" name="new_password" id="new-password" class="form-control" required>
-                        <small class="text-muted">Password minimal 6 karakter</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm-password">Konfirmasi Password Baru</label>
-                        <input type="password" name="confirm_password" id="confirm-password" class="form-control" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline" onclick="document.getElementById('change-password-modal').style.display='none'">Batal</button>
-                    <button type="submit" name="change_password" class="btn btn-primary">Simpan Password</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Change Avatar Modal -->
     <div class="modal" id="change-avatar-modal" role="dialog" aria-labelledby="change-avatar-title" style="display: none;">
         <div class="modal-content">
-            <form method="POST" action="profile.php" enctype="multipart/form-data">
+            <form method="POST" action="profilA.php" enctype="multipart/form-data">
                 <div class="modal-header">
                     <h3 id="change-avatar-title">Ubah Foto Profil</h3>
                     <span class="close" onclick="document.getElementById('change-avatar-modal').style.display='none'" aria-label="Close modal">&times;</span>
                 </div>
                 <div class="modal-body">
                     <div class="avatar-preview-container">
-                        <img src="image/profile-picture.jpg" alt="Current Avatar Preview" class="avatar-preview">
+                        <?php if (!empty($admin['profil'])) : ?>
+                            <?php if (filter_var($admin['profil'], FILTER_VALIDATE_URL)) : ?>
+                                <img src="<?= htmlspecialchars($admin['profil']) ?>" alt="Current Avatar Preview" class="avatar-preview" id="avatar-preview">
+                            <?php else : ?>
+                                <img src="image/<?= htmlspecialchars($admin['profil']) ?>" alt="Current Avatar Preview" class="avatar-preview" id="avatar-preview">
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <div class="avatar-preview" style="background-color: var(--light-purple); display: flex; align-items: center; justify-content: center;">
+                                <i class='bx bx-user' style="font-size: 3rem; color: var(--purple);"></i>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <div class="form-group">
                         <label for="avatar-upload">Unggah Foto Baru</label>
                         <input type="file" name="avatar_upload" id="avatar-upload" class="form-control" accept="image/*">
                     </div>
-                    <div class="avatar-options">
-                        <div class="avatar-option">
-                            <input type="radio" name="avatar_url" id="avatar1" value="https://randomuser.me/api/portraits/men/1.jpg" style="display: none;">
-                            <label for="avatar1" style="cursor: pointer;">
-                                <img src="https://randomuser.me/api/portraits/men/1.jpg" alt="Avatar Option 1">
-                            </label>
-                        </div>
-                        <div class="avatar-option">
-                            <input type="radio" name="avatar_url" id="avatar2" value="https://randomuser.me/api/portraits/women/1.jpg" style="display: none;">
-                            <label for="avatar2" style="cursor: pointer;">
-                                <img src="https://randomuser.me/api/portraits/women/1.jpg" alt="Avatar Option 2">
-                            </label>
-                        </div>
-                        <div class="avatar-option">
-                            <input type="radio" name="avatar_url" id="avatar3" value="https://randomuser.me/api/portraits/men/2.jpg" style="display: none;">
-                            <label for="avatar3" style="cursor: pointer;">
-                                <img src="https://randomuser.me/api/portraits/men/2.jpg" alt="Avatar Option 3">
-                            </label>
-                        </div>
-                        <div class="avatar-option">
-                            <input type="radio" name="avatar_url" id="avatar4" value="https://randomuser.me/api/portraits/women/2.jpg" style="display: none;">
-                            <label for="avatar4" style="cursor: pointer;">
-                                <img src="https://randomuser.me/api/portraits/women/2.jpg" alt="Avatar Option 4">
-                            </label>
-                        </div>
-                    </div>
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="document.getElementById('change-avatar-modal').style.display='none'">Batal</button>
@@ -999,7 +1028,17 @@ $admin = mysqli_fetch_assoc($query);
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        document.querySelector('#change-avatar-modal .avatar-preview').src = event.target.result;
+                        const avatarPreview = document.querySelector('#change-avatar-modal .avatar-preview');
+                        if (avatarPreview.tagName === 'IMG') {
+                            avatarPreview.src = event.target.result;
+                        } else {
+                            // Replace the div with an img element
+                            const newAvatarPreview = document.createElement('img');
+                            newAvatarPreview.src = event.target.result;
+                            newAvatarPreview.className = 'avatar-preview';
+                            newAvatarPreview.alt = 'Current Avatar Preview';
+                            avatarPreview.parentNode.replaceChild(newAvatarPreview, avatarPreview);
+                        }
                         
                         // Uncheck any selected radio buttons
                         document.querySelectorAll('input[name="avatar_url"]').forEach(radio => {
@@ -1014,7 +1053,17 @@ $admin = mysqli_fetch_assoc($query);
             document.querySelectorAll('input[name="avatar_url"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     if (this.checked) {
-                        document.querySelector('#change-avatar-modal .avatar-preview').src = this.value;
+                        const avatarPreview = document.querySelector('#change-avatar-modal .avatar-preview');
+                        if (avatarPreview.tagName === 'IMG') {
+                            avatarPreview.src = this.value;
+                        } else {
+                            // Replace the div with an img element
+                            const newAvatarPreview = document.createElement('img');
+                            newAvatarPreview.src = this.value;
+                            newAvatarPreview.className = 'avatar-preview';
+                            newAvatarPreview.alt = 'Current Avatar Preview';
+                            avatarPreview.parentNode.replaceChild(newAvatarPreview, avatarPreview);
+                        }
                         document.getElementById('avatar-upload').value = '';
                     }
                 });

@@ -10,17 +10,20 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 $query = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username'");
 $user = mysqli_fetch_assoc($query);
+$id_users = $user['id_users'];
 
+// Get wishlist items
+$queryWishlist = mysqli_query($koneksi, "
+    SELECT b.* 
+    FROM wishlist w
+    JOIN buku b ON w.id_buku = b.id_buku
+    WHERE w.id_users = $id_users
+");
+
+$wishlistCount = mysqli_num_rows($queryWishlist);
 $queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
-
-$id_users = $_SESSION['id_users'];
-$queryWishlist = mysqli_query($koneksi, 
-    "SELECT b.* FROM buku b 
-    JOIN wishlist w ON b.id_buku = w.id_buku 
-    WHERE w.id_users = '$id_users'");
-
-$jumlah_barang = mysqli_num_rows($queryWishlist);
 ?>
+
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
@@ -694,15 +697,15 @@ $jumlah_barang = mysqli_num_rows($queryWishlist);
         <div class="container">
         <div class="main-content">
             <div class="sidebar">
-                
                 <div class="sidebar-section">
                     <ul class="sidebar-menu">
                         <h3 class="sidebar-title">Akun Saya</h3>
                         <ul class="sidebar-menu">
-                            <li><a href="akunU.php" >Pengaturan Profil</a></li>
-                        <li><a href="wishlish.php" class="active">Wishlist</a></li>
-                        <li><a href="transaksiU.php">Transaksi</a></li>
-                        <li><a href="alamat.php">Alamat</a></li>
+                            <li><a href="akunU.php">Pengaturan Profil</a></li>
+                            <li><a href="wishlist.php" class="active">Wishlist</a></li>
+                            <li><a href="transaksiU.php">Transaksi</a></li>
+                            <li><a href="alamat.php">Alamat</a></li>
+                        </ul>
                     </ul>
                 </div>
             </div>
@@ -711,13 +714,12 @@ $jumlah_barang = mysqli_num_rows($queryWishlist);
                 <h1 class="section-title">Wishlist</h1>
                 
                 <div class="wishlist-header">
-                    <div class="wishlist-count"><?= $jumlah_barang ?> Barang</div>
+                    <div class="wishlist-count"><?= $wishlistCount ?> Barang</div>
                 </div>
             
                 <div class="wishlist-horizontal-container">
-                    <?php if ($jumlah_barang > 0): ?>
+                    <?php if ($wishlistCount > 0): ?>
                         <?php while ($buku = mysqli_fetch_assoc($queryWishlist)): ?>
-                            <!-- Item Wishlist -->
                             <div class="wishlist-item-horizontal">
                                 <div class="wishlist-img-horizontal">
                                     <img src="image/<?= $buku['gambar'] ?>" alt="<?= $buku['judul'] ?>">
@@ -726,18 +728,22 @@ $jumlah_barang = mysqli_num_rows($queryWishlist);
                                     <div class="wishlist-author"><?= $buku['penulis'] ?></div>
                                     <div class="wishlist-title"><?= $buku['judul'] ?></div>
                                     <div class="wishlist-price">Rp <?= number_format($buku['harga'], 0, ',', '.') ?></div>
-                                    <div class="wishlist-actions">
-                                        <a href="hapus_wishlist.php?id_buku=<?= $buku['id_buku'] ?>" class="remove-btn">Hapus</a>
-                                        <a href="checkout2.php?id_buku=<?= $buku['id_buku'] ?>" class="buy-btn">Beli Sekarang</a>
-                                    </div>
+                                    <form method="post" action="wishlist_action.php" style="margin-top: 10px;">
+                                        <input type="hidden" name="id_buku" value="<?= $buku['id_buku'] ?>">
+                                        <button type="submit" style="background: none; border: none; cursor: pointer; color: #ff0000;">
+                                            <i class="fas fa-trash-alt"></i> Hapus
+                                        </button>
+                                    </form>
+                                    <a href="detail.php?id_buku=<?= $buku['id_buku'] ?>" style="margin-top: 5px; display: inline-block;">Lihat Detail</a>
                                 </div>
                             </div>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <p class="empty-wishlist">Wishlist Anda masih kosong</p>
+                        <p>Tidak ada buku dalam wishlist</p>
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
     </div>
     
       
