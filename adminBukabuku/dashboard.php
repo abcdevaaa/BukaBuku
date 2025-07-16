@@ -30,7 +30,7 @@ $query_total_penjualan = "SELECT SUM(total_belanja) as total FROM pesanan WHERE 
 $result_total_penjualan = mysqli_query($koneksi, $query_total_penjualan);
 $total_penjualan = mysqli_fetch_assoc($result_total_penjualan)['total'];
 
-$admin_id = $_SESSION['id_users']; // Asumsikan id admin disimpan di session
+$admin_id = $_SESSION['id_users']; 
 $query_admin = "SELECT profil FROM users WHERE id_users = '$admin_id'";
 $result_admin = mysqli_query($koneksi, $query_admin);
 $admin = mysqli_fetch_assoc($result_admin);

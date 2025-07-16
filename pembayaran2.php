@@ -31,6 +31,8 @@ $detail = mysqli_fetch_assoc($result_detail);
 
 // Hitung waktu kadaluarsa 
 $waktu_kadaluarsa = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+$queryKategori2 = mysqli_query($koneksi, "SELECT * FROM kategori");
 ?>
 
 <!DOCTYPE html>
